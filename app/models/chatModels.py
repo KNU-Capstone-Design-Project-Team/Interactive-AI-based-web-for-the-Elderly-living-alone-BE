@@ -15,7 +15,7 @@ def getDate():
     return today
 
 # 새로운 채팅을 생성하는 함수
-def createConversation():
+def createConversation(seniorUserInd):
     # 날짜는 매일 새로 생성되므로 하루에 한 번만 Conversation을 생성
     today = getDate()
 
@@ -28,7 +28,8 @@ def createConversation():
     if not existingConversation:
         newConversation = {
             "date": today,
-            "responseRatio": 0.0  # 기본값
+            "responseRatio": 0.0,  # 기본값
+            "SeniorUser_id": seniorUserInd
         }
         db.Conversation.insert_one(newConversation)
         print(f"New conversation created for {today}")
@@ -64,7 +65,7 @@ def createQuestion(conversationId):
 
 # 시간당 처음 질문의 응답 시간을 업데이트
 # ((+추가구현요망)만약 responseTime이 오차범위 내로 start time과 같다면)
-def updateQuestion(responseTime):
+def updateResponseTimeInQuestion(responseTime):
     now = datetime.now()
     today = now.strftime('%Y.%m.%d')
     db = client.ElderCareNet

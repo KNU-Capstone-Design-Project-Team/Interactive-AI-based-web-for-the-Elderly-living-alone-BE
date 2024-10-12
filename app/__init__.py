@@ -16,7 +16,7 @@ def create_app():
     db = client.ElderCareNet
 
     # 현 날짜의 Conversation 생성하고 첫 질문 생성
-    createConversation()
+    createConversation(None)
 
     #원래는 스케줄러 타고 실행되어야하는 init 첫 question 생성 함수인데
     # 개발을 위해서 여기에 임의로 호출함

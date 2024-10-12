@@ -149,6 +149,7 @@ class Chatbot:
                 print("AI: ", self.get_response_content())
                 if self.exchange_count == 9:
                     print("Conversation ended naturally.")  # 대화 종료
+                    continue
                 # 사용자의 입력을 10분(600초) 동안 기다림
                 #input_with_timeout = InputWithTimeout(timeout=600)
                 user_input = self.get_input(600, "User: ")

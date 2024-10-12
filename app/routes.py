@@ -1,6 +1,9 @@
 from flask import Blueprint, request, jsonify, url_for, redirect
 from app.models.chatModels import *
 from chatbot import Chatbot
+from asyncio import sleep
+import threading
+from queue import Queue, Empty
 
 main = Blueprint('main', __name__)
 #api = Api(main, doc='/api-docs')  # /api-docs 경로에 Swagger 문서 생성
@@ -8,6 +11,8 @@ main = Blueprint('main', __name__)
 
 chatHistory = []
 myChatBot = Chatbot("gpt-4")
+# 플래그 변수를 사용하여 이미 응답이 반환되었는지 추적
+response_sent = False
 
 
 @main.route('/', methods=['POST', 'GET'])
@@ -28,44 +33,77 @@ def home():
     if request.method == 'GET':
         return jsonify({"message": "성공적으로 ""get"" 받았습니다."}), 200
 
+'''
+URL: /chat
+Method: post
+Description: 사용자가 입력한 메세지를 gpt api에 전달하고, 그에 대한 응답을 반환하는 엔드포인트
 
-@main.route('/chat', methods=['POST', 'GET'])
+Request
+{
+    "userInput" : "user가 입력한 텍스트"
+}
+
+Response
+200 ok[성공시]
+{
+    "aiContentSentence": "AI의 응답 또는 질문 텍스트"
+}
+400 Bad Request [잘못된 요청 시]
+{
+    "error" : "Invalid request format"
+}
+500 internal server error [서버 오류시]
+{
+    "error" : "Internal server error"
+}
+'''
+@main.route('/chat', methods=['POST'])
 def chat():
+    global response_sent
+    response_sent = False  # 새로운 요청이 들어올 때마다 플래그를 리셋
+
     if request.method == 'POST':
+        try:
+            '''
+                일단 채은이가 해놓은대로 9번 대화하도록 만들어 놨음. -> ***나중에 수정 필수***
+            '''
+            if myChatBot.exchange_count >= 9:  # 9번 대화 교환
+                print(f"대화 횟수를 초과하였으므로 대화를 할 수 없습니다.")
+                return jsonify({
+                    "error": "대화 횟수를 초과하였으므로 대화를 할 수 없습니다."
+                }), 400
 
-        if myChatBot.exchange_count >= 9:  # 9번 대화 교환
-            print(f"대화 횟수를 초과하였으므로 대화를 할 수 없습니다.")
+
+            # AI가 먼저 질문을 시작함
+            if myChatBot.exchange_count == 0:  # 첫 질문일 때
+                setAIContent(myChatBot)
+
+            else:  # 첫 질문이 아닐 때
+                userInput = request.json.get('userInput')   # request받아오기
+
+                if myChatBot.exchange_count == 1:
+                    if userInput == '\n':
+                        return jsonify({
+                            "aiContentSentence" : '1\n'
+                        }), 200
+                    else:
+                        updateResponseTimeInQuestion(datetime.now())
+
+                myChatBot.add_user_message(userInput)  # 사용자가 입력을 했다면 대화 히스토리에 추가
+                myChatBot.exchange_count += 1
+
+                # AI 응답
+                setAIContent(myChatBot)
+
+
             return jsonify({
-                "error": "대화 횟수를 초과하였으므로 대화를 할 수 없습니다."
-            }), 400
+                "aiContentSentence": myChatBot.get_response_content()
+            }), 200
 
 
-        if myChatBot.exchange_count == 0:  # 첫 질문일때
-            setAIContent(myChatBot)
-            chatHistory.append({"ai": myChatBot.get_response_content()})
-
-        else:  # 첫 질문이 아닐때
-            userInput = request.json.get('userInput')  # 사용자 입력
-            myChatBot.add_user_message(userInput)
-            chatHistory.append({"user": userInput})
-
-            # 사용자의 첫 질문의 첫 대답일 경우
-            if myChatBot.ai_count == 1:
-                updateQuestion(datetime.now())
-            myChatBot.exchange_count += 1
-
-            # 사용자 입력 후 응답 생성
-            setAIContent(myChatBot)
-            chatHistory.append({"ai": myChatBot.get_response_content()})
-
-
-        return jsonify({
-            "aiContentSentence": myChatBot.get_response_content(),
-            "message": "대화가 성공적으로 종료되었습니다."
-        }), 200
-
-    if request.method == 'GET':
-        return jsonify(chatHistory), 200
+        # 서버 내부 오류 발생 시 500 에러 반환
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
 
 @main.route('/recommend', methods=['POST', 'GET'])
@@ -85,8 +123,8 @@ def recommand():
 def clear_chat_history():
     # 현재 요청의 경로를 확인
     if request.path != '/chat':
-        global chatHistory
-        chatHistory.clear()  # chat_history 초기화
+        #global chatHistory
+        #chatHistory.clear()  # chat_history 초기화
 
         myChatBot.chatBotInit() # gpt와 대화하기 전으로 돌아가기
 
