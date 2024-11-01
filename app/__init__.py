@@ -2,8 +2,12 @@ from flask import Flask
 from app.models.chatModels import *
 from pymongo import MongoClient
 from app.scheduler import scheduleJobs, shutdownScheduler
+from flasgger import Swagger
 
-#def create_app(config_name):
+'''
+전체적으로 추가 구현해야할 사항:
+    * 공공데이터 api를 써서 목록들을 하루 단위로 DB에 받아 옴.
+'''
 def create_app():
     app = Flask(__name__)
 
@@ -17,6 +21,8 @@ def create_app():
 
     # 현 날짜의 Conversation 생성하고 첫 질문 생성
     createConversation(None)
+
+    #하루 단위로
 
     #원래는 스케줄러 타고 실행되어야하는 init 첫 question 생성 함수인데
     # 개발을 위해서 여기에 임의로 호출함
@@ -37,6 +43,13 @@ def create_app():
     def shutdownSession(exception=None):
         shutdownScheduler()
     '''
+    # Swagger 설정
+    app.config['SWAGGER'] = {
+        'title': 'My API',
+        'uiversion': 4
+    }
+    swagger = Swagger(app)  # Swagger 객체 초기화
+
     # 라우트 등록
     from app.routes import main as main_blueprint
     app.register_blueprint(main_blueprint)
