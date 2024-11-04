@@ -1,6 +1,7 @@
 from openai import OpenAI
 import os
 from app.models.chatModels import storeContext
+import datetime
 
 # context를 요약해달라 요청하는 함수
 def requestContextStr(userInput):
@@ -11,6 +12,23 @@ def requestContextStr(userInput):
     # contextStr에 저장하기
     
     storeContext(contextStr)
+
+latestTaskStatus = {
+    "status": "incomplete",
+    "task": None,
+    "lastRunTime": None,
+    "newTask": False  # 새 작업 완료 시 True로 설정
+}
+
+def myScheduledTask():
+    print("Scheduled task executed")
+    latestTaskStatus["status"] = "completed"
+    latestTaskStatus["lastRunTime"] = datetime.datetime.now().isoformat()
+    latestTaskStatus["newTask"] = True  # 새 작업 발생을 알림
+
+def sendTask():
+    return latestTaskStatus.get('task')
+
 
 '''
 # push api 설정 -> 알림 보내기

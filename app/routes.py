@@ -3,8 +3,11 @@ from app.models.chatModels import *
 from app.models.joinMembershipModels import *
 from app.models.loginInfoModels import *
 from app.models.noticeModels import *
+from app.models.asyncModels import *
+from app.services.chatServices import *
 from chatbot import Chatbot
-from asyncio import sleep
+import redis
+import threading
 
 main = Blueprint('main', __name__)
 
@@ -20,7 +23,20 @@ response_sent = False
 
 '''
 
-@main.route('/', methods=['POST'])
+
+@main.route('/checkNewTask', methods=['GET'])   #비동기
+def check_new_task():
+    # 새 작업이 있는지 확인
+    if latestTaskStatus["newTask"]:
+        # 프론트엔드에 전달 후 상태 초기화
+        latestTaskStatus["newTask"] = False
+
+        return jsonify(sendTask()), 200
+    else:
+        return jsonify({"status": "noNewTask"}), 300
+
+
+@main.route('/', methods=['POST'])  #jwt 토큰 관련 추가
 def login():
     try:
         '''
@@ -31,8 +47,32 @@ def login():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@main.route('/join', methods=['POST, GET'])
+@main.route('/join', methods=['POST, GET']) #ok
 def join():
+    '''
+    URL: /senior/<loginId>/chat
+Method: post
+Description:사용자가 입력한 메세지를 gpt api에 전달하고,그에 대한 응답을 반환하는 엔드포인트
+
+Request
+{
+    "userInput" : "user가 입력한 텍스트"
+}
+
+Response
+200 ok[성공시]
+{
+    "aiContentSentence": "AI의 응답 또는 질문 텍스트"
+}
+400 Bad Request [잘못된 요청 시]
+{
+    "error" : "Invalid request format"
+}
+500 internal server error [서버 오류시]
+{
+    "error" : "Internal server error"
+}
+    '''
     try:
         if request.method == 'POST':
             category = request.json.get('category')
@@ -42,7 +82,7 @@ def join():
                 return redirect(url_for(joinSenior(1)))
             else :
                 return jsonify({
-                    "message": "잘못된 요청입니다."
+                    "message": "Invalid request value."
                 }), 400
     # 서버 내부 오류 발생 시 500 에러 반환
     except Exception as e:
@@ -60,11 +100,11 @@ def joinSenior(joinId):
                     }), 200
                 else:
                     return jsonify({
-                        "message": "parameter is not integer."
+                        "message": "parameter is not valid value."
                     }), 400
             else:
                 return jsonify({
-                    "message": "parameter is not valid value."
+                    "message": "parameter is not integer."
                 }), 400
 
         if request.method == 'POST':
@@ -79,10 +119,6 @@ def joinSenior(joinId):
                 '''
                 
             if joinId == 2:
-                '''
-                이름 보내줘야하는지 프론트랑 상의하기
-                '''
-
                 year = request.json.get('year')
                 month = request.json.get('month')
                 day = request.json.get('day')
@@ -127,7 +163,7 @@ def joinSenior(joinId):
         return jsonify({"error": str(e)}), 500
 
 @main.route('/join/senior/<int:joinId>/addinfo', methods=['POST, GET'])
-def joinAddInfo():
+def joinAddInfo(joinId):
     try:
         pass
     # 서버 내부 오류 발생 시 500 에러 반환
@@ -145,11 +181,11 @@ def joinSupervisor(joinId):
                     }), 200
                 else:
                     return jsonify({
-                        "message": "parameter is not integer."
+                        "message": "parameter is not valid value."
                     }), 400
             else:
                 return jsonify({
-                    "message": "parameter is not valid value."
+                    "message": "parameter is not integer."
                 }), 400
 
         if request.method == 'POST':
@@ -180,8 +216,9 @@ def joinSupervisor(joinId):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @main.route('/welcome/<loginId>', methods=['POST, GET'])
-def welcome():
+def welcome(loginId):
     try:
         # if -> loginId가 senior에서 찾을 수 있다면
         # return redirect(url_for(joinSenior(welcomeSenior)))
@@ -195,7 +232,7 @@ def welcome():
         return jsonify({"error": str(e)}), 500
 
 @main.route('/welcome/senior/<int:guideId>', methods=['POST, GET'])
-def welcomeSenior():
+def welcomeSenior(guidId):
     try:
         pass
     # 서버 내부 오류 발생 시 500 에러 반환
@@ -203,12 +240,13 @@ def welcomeSenior():
         return jsonify({"error": str(e)}), 500
 
 @main.route('/welcome/supervisor/<int:guideId>', methods=['POST, GET'])
-def welcomeSupervisor():
+def welcomeSupervisor(guidId):
     try:
         pass
     # 서버 내부 오류 발생 시 500 에러 반환
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @main.route('/senior/<loginId>', methods=['POST', 'GET'])
 def seniorHome(loginId):
@@ -240,7 +278,7 @@ def supervisorHome(loginId):
             if action == 'notify':
                 # '대화하기' 버튼을 누른 경우 /chat 경로로 리다이렉트
                 return redirect(url_for(supervisorNotice))
-            elif action == 'recommend':
+            elif action == 'stats':
                 # '추천하기' 버튼을 누른 경우 /recommend 경로로 리다이렉트
                 return redirect(url_for(supervisorStats))
             else:
@@ -250,7 +288,8 @@ def supervisorHome(loginId):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@main.route('/senior/<loginId>/chat', methods=['POST'])
+
+@main.route('/senior/<loginId>/chat', methods=['GET', 'POST'])
 def seniorChat(loginId):
     global response_sent
     response_sent = False  # 새로운 요청이 들어올 때마다 플래그를 리셋
@@ -258,8 +297,10 @@ def seniorChat(loginId):
     try:
         if request.method == 'GET':
             if (isLoginIdInDB(loginId) == True):
+
+                setAIContent(myChatBot)
                 return jsonify({
-                    "message": "" + loginId + "exists."
+                    "message": "" + loginId + "exists and AI question is sended."
                 }), 200
             else:
                 return jsonify({
@@ -279,13 +320,14 @@ def seniorChat(loginId):
 
             # AI가 먼저 질문을 시작함
             if myChatBot.exchange_count == 0:  # 첫 질문일 때
-                setAIContent(myChatBot)
+                pass
 
             else:  # 첫 질문이 아닐 때
                 userInput = request.json.get('userInput')   # request받아오기
 
                 if myChatBot.exchange_count == 1:
                     if userInput == '\n':
+
                         return jsonify({
                             "aiContentSentence" : '1\n'
                         }), 200
@@ -307,7 +349,6 @@ def seniorChat(loginId):
     # 서버 내부 오류 발생 시 500 에러 반환
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 @main.route('/senior/<loginId>/recommend', methods=['POST', 'GET'])
 def seniorRecommend(loginId):
@@ -361,55 +402,74 @@ def seniorRecommendPost(loginId):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@main.route('/supervisor/<loginId>/notice', methods=['POST', 'GET'])
+'''
+@app.route('/publish', methods=['POST'])
+def publish_message():
+    message = request.json.get('message')
+    redisClient.publish('chat_channel', message)  # chat_channel에 메시지 게시
+    return jsonify({"status": "Message published"})
+
+# 구독자 리스너 (서버에서 Redis 구독 대기)
+def event_listener():
+    pubsub = redisClient.pubsub()
+    pubsub.subscribe('chat_channel')
+    for message in pubsub.listen():
+        if message["type"] == "message":
+            print("Received message:", message["data"].decode("utf-8"))  # 디코딩 후 메시지 출력
+
+'''
+
+'''
+페이지에 실시간으로 알림이 떠오르는 걸로 나중에 여건이 되면 하는걸로
+근데 일단 하루치 보호자마다 담당하고있는 senior들의 응답률을 보내줌.
+'''
+@main.route('/supervisor/<loginId>/notice', methods=['POST', 'GET']) #비동기
 def supervisorNotice(loginId):
     try:
         if request.method == 'GET':
-            if (isLoginIdInDB(loginId) == True):
+            # loginId
+            if (isLoginIdInDB(loginId) == False):
                 return jsonify({
-                    "message": "" + loginId + "exists."
+                    "error": "" + loginId + "does not exists."
+                }), 400
+            
+            # 보호자당 senior들의 알림을 23시 전까지 유지
+            seniorList = getResponseTimesAndNamesBySeniors(loginId)
+
+            return jsonify({
+                "seniorNoticeList": seniorList,
+                "messages": "" + loginId + "exists and notice list[(name, response time),(), ...] is sent successfully."
+            }), 200
+
+    # 서버 내부 오류 발생 시 500 에러 반환
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@main.route('/senior/<loginId>/stats', methods=['POST', 'GET']) #ok
+def supervisorStats(loginId):
+    try:
+        if request.method == 'GET':
+            if (isLoginIdInDB(loginId) == True):
+                nameList = getNameListByLoginId(loginId)
+                nameList2 = []
+                for i in nameList: nameList2.append(i[0])
+
+                responseTimeList = getResponseTimeListByLoginId(nameList)
+
+                return jsonify({
+                    "names": nameList2,
+                    "responseTimes": responseTimeList,
+                    "message": "" + loginId + "exists and names, responseTime is sent successfully."
                 }), 200
             else:
                 return jsonify({
                     "error": "" + loginId + "does not exists."
                 }), 400
 
-        if request.method == 'POST':
-            '''
-            알림페이지의 최근 N일 까지의 응답률을 달라고 요청보내주면
-            백에서 현재 <=N 까지의 최근 응답률들을 전부 JSON으로 list를 보내 줌. 
-            '''
-            noticeList = []
-            '''
-            for i in range(10):
-                if (responseRatio)
-            '''
-            return jsonify({
-                "message": "성공적으로 ""post"" 받았습니다."
-            }), 200
-
-
     # 서버 내부 오류 발생 시 500 에러 반환
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-@main.route('/senior/<loginId>/stats', methods=['POST', 'GET'])
-def supervisorStats(loginId):
-    try:
-        if request.method == 'POST':
-            '''
-            통계 데이터 요청받으면 json으로 보내주기
-            '''
-
-            return jsonify({
-                "message": "성공적으로 ""post"" 받았습니다."
-            }), 200
-
-
-    # 서버 내부 오류 발생 시 500 에러 반환
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 @main.before_request
 def clear_chat_history():

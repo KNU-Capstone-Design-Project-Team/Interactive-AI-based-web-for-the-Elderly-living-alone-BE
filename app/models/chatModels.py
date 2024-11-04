@@ -70,27 +70,13 @@ def updateResponseTimeInQuestion(responseTime):
     today = now.strftime('%Y.%m.%d')
     db = client.ElderCareNet
 
-    convId = db.Conversation.find_one({"date": today})
+    conv = db.Conversation.find_one({"date": today})
     print(f"conversation find successfully")
-    q = db.Question.find_one({"Conversation_id":(convId.get("_id"))}, {"hour":(now.hour)})
+    q = db.Question.find_one({"Conversation_id":(conv.get("_id"))}, {"hour":(now.hour)})
     print(f"question find successfully")
     db.Question.update_one({"_id": q.get('_id')}, {"$set":{"responseTime": responseTime}})
 
     print(f"update question successfully and response time is {responseTime}")
-
-
-# 응답 기록하는 함수
-def recordResponse(questionId):
-    now = datetime.now()
-
-    db = client.ElderCareNet
-
-    # Question 업데이트 (응답 시간 기록)
-    db.Question.update_one(
-        {"_id": questionId},
-        {"$set": {"responseTime": now}}
-    )
-    print(f"Response recorded for question {questionId}")
 
 
 # 응답률 계산 함수

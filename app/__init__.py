@@ -3,6 +3,8 @@ from app.models.chatModels import *
 from pymongo import MongoClient
 from app.scheduler import scheduleJobs, shutdownScheduler
 from flasgger import Swagger
+import redis
+import threading
 
 '''
 전체적으로 추가 구현해야할 사항:
@@ -18,6 +20,7 @@ def create_app():
     load_dotenv()
     client = MongoClient(os.getenv("MONGO_URI"))
     db = client.ElderCareNet
+    redisClient = redis.StrictRedis(host='localhost', port=6379, db=0)
 
     # 현 날짜의 Conversation 생성하고 첫 질문 생성
     createConversation(None)
@@ -30,18 +33,27 @@ def create_app():
     temp = db.Conversation.find_one({"date": today})
     createQuestion(temp.get("_id"))
 
-    '''
+
     # 첫 번째 HTTP 요청이 처리되기 전에 한 번만 스케줄러 작업 등록
     def initialize():
         scheduleJobs()
     app.before_request(initialize)
-    '''
 
-    '''
+
     # 앱 종료 시 스케줄러 종료
+    '''
     @app.teardown_appcontext
     def shutdownSession(exception=None):
         shutdownScheduler()
+    '''
+    try:
+        # 스케줄러가 백그라운드에서 작동 중이므로 메인 스레드가 계속 실행되게 함
+        while True:
+            pass
+    except (KeyboardInterrupt, SystemExit):
+        # 스케줄러 종료
+        shutdownScheduler()
+
     '''
     # Swagger 설정
     app.config['SWAGGER'] = {
@@ -49,6 +61,7 @@ def create_app():
         'uiversion': 4
     }
     swagger = Swagger(app)  # Swagger 객체 초기화
+    '''
 
     # 라우트 등록
     from app.routes import main as main_blueprint
