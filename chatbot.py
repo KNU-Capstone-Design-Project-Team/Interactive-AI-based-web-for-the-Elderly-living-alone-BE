@@ -109,10 +109,7 @@ class Chatbot:
                 summary = self.generate_summary()  # 요약 문자열 받기
                 print("Summary:", summary)
                 print("Conversation ended naturally.")
-            
-            # 4회마다 요약 생성
-         #   if self.exchange_count % 4 == 0:
-          #      self.generate_summary()
+         
 
 if __name__ == "__main__":
     chatbot = Chatbot("gpt-4")
