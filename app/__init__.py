@@ -1,17 +1,87 @@
+import datetime
 from flask import Flask
 from app.models.chatModels import *
-from pymongo import MongoClient
-from app.scheduler import scheduleJobs, shutdownScheduler
+from app.scheduler import *
 from flasgger import Swagger
-import redis
 import threading
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.jobstores.base import JobLookupError
+from app.models.chatModels import *
+from app.routes import scheduledTask
+import time
 
 '''
 전체적으로 추가 구현해야할 사항:
     * 공공데이터 api를 써서 목록들을 하루 단위로 DB에 받아 옴.
 '''
+
 def create_app():
+
     app = Flask(__name__)
+    scheduler = BackgroundScheduler(timezone='Asia/Seoul')
+
+    '''
+    ******* SCHEDULING   methods *******
+    '''
+
+    def asyncFromFront():
+        """
+            8시부터 22시 사이에 2시간 간격으로 새로운 채팅을 생성하는 작업을 등록
+        """
+        # 매일 8시, 10시, 12시, 14시, 16시, 18시, 20시, 22시에 실행
+        hours = [8, 10, 12, 14, 16, 18, 20, 22]
+
+        for hour in hours:
+            scheduler.add_job(
+                id=f"create first question at {hour}",
+                func=scheduledTask,  # 여기서 ai의 첫 질문을 보내줘야 함.
+                trigger="cron",
+                hour=hour,
+                minute=0
+            )
+
+    '''
+    def scheduleJobs():
+        # 매일 8시, 10시, 12시, 14시, 16시, 18시, 20시, 22시에 실행
+        hours = [7, 9, 11, 13, 15, 17, 19, 21]
+
+        for hour in hours:
+
+            scheduler.add_job(
+                id=f"create question at {hour}",
+                func=scheduledTask,
+                trigger="cron",
+                hour=hour,
+                minute=50
+            )
+    '''
+
+    def calculateRatio():
+        '''
+        오후 10시 30분에 응답률을 계산하는 함수
+        '''
+        hour = 22
+
+        scheduler.add_job(
+            id=f"calculate response ratio at {hour}",
+            func=calculateResponseRatio,  # 여기서 응답률 최신 10개를 list보내줘야함
+            trigger="cron",
+            hour=hour,
+            minute=30
+        )
+
+    # 하루단위로 공공데이터 받아오는 것도 스케쥴링으로 나중에 구현하기
+
+    def shutdownScheduler():
+        """
+        앱 종료 시 스케줄러도 종료
+        """
+        scheduler.shutdown()
+
+    '''
+    init
+    '''
+    scheduler.start()
 
     # 환경 변수에 따라 설정 적용
     #app.config.from_object(config[config_name])
@@ -20,40 +90,35 @@ def create_app():
     load_dotenv()
     client = MongoClient(os.getenv("MONGO_URI"))
     db = client.ElderCareNet
-    redisClient = redis.StrictRedis(host='localhost', port=6379, db=0)
+
 
     # 현 날짜의 Conversation 생성하고 첫 질문 생성
     createConversation(None)
 
-    #하루 단위로
 
     #원래는 스케줄러 타고 실행되어야하는 init 첫 question 생성 함수인데
     # 개발을 위해서 여기에 임의로 호출함
+    '''
     today = datetime.now().strftime('%Y.%m.%d')
     temp = db.Conversation.find_one({"date": today})
-    createQuestion(temp.get("_id"))
-
-
-    # 첫 번째 HTTP 요청이 처리되기 전에 한 번만 스케줄러 작업 등록
-    def initialize():
-        scheduleJobs()
-    app.before_request(initialize)
-
-
-    # 앱 종료 시 스케줄러 종료
+    #createQuestion(temp.get("_id"))
     '''
-    @app.teardown_appcontext
-    def shutdownSession(exception=None):
-        shutdownScheduler()
+
+    # Scheduling
+    asyncFromFront()
+    #scheduleJobs()
+    calculateRatio()
     '''
+    # python console 실행 테스트용
     try:
         # 스케줄러가 백그라운드에서 작동 중이므로 메인 스레드가 계속 실행되게 함
         while True:
-            pass
+            print(f"running.........")
+            time.sleep(1)
     except (KeyboardInterrupt, SystemExit):
         # 스케줄러 종료
         shutdownScheduler()
-
+    '''
     '''
     # Swagger 설정
     app.config['SWAGGER'] = {
@@ -68,3 +133,6 @@ def create_app():
     app.register_blueprint(main_blueprint)
 
     return app
+
+
+
