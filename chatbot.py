@@ -116,8 +116,8 @@ class Chatbot:
                 print("Conversation ended naturally.")
          
 
-'''
+
 if __name__ == "__main__":
     chatbot = Chatbot("gpt-4")
     chatbot.chat_loop()
-'''
+    
