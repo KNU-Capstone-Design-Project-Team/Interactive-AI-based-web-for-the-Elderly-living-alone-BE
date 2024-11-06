@@ -15,7 +15,7 @@ def getDate():
     return today
 
 # 새로운 채팅을 생성하는 함수
-def createConversation(seniorUserInd):
+def createConversation(seniorUserId):
     # 날짜는 매일 새로 생성되므로 하루에 한 번만 Conversation을 생성
     today = getDate()
 
@@ -29,7 +29,7 @@ def createConversation(seniorUserInd):
         newConversation = {
             "date": today,
             "responseRatio": 0.0,  # 기본값
-            "SeniorUser_id": seniorUserInd
+            "SeniorUser_id": seniorUserId
         }
         db.Conversation.insert_one(newConversation)
         print(f"New conversation created for {today}")
@@ -107,6 +107,7 @@ def calculateResponseRatio():
         {"_id": conversationId},
         {"$set": {"responseRatio": responseRatio}}
     )
+    print(f"stored responseRatio.")
 
 
 # gpt 대화
@@ -123,16 +124,16 @@ def calculateResponseRatio():
     (terminate)세션 종료 조건도 여기 적어야 함.
     if 대화내용이 이러하면 then terminate.
 '''
-def setAIContent(myChatBot):
-    response = myChatBot.send_request()  # AI의 첫 응답
-    myChatBot.add_response(response)
+def setAIContent(chatBot):    # ai의 응답을 return함
+    response = chatBot.send_request()  # AI의 첫 응답
+    chatBot.add_response(response)
 
-    print("AI: ", myChatBot.get_response_content())
+    print("AI: ", chatBot.get_response_content())
 
-    myChatBot.exchange_count += 1  # 대화 횟수를 추적
-    myChatBot.ai_count += 1  # ai 대화 횟수 카운트
+    chatBot.exchange_count += 1  # 대화 횟수를 추적
+    chatBot.ai_count += 1  # ai 대화 횟수 카운트
 
-    return None
+    return chatBot.get_response_content()
 
 
 # gpt에서 세션 중 요약된 context str을 저장하는 함수

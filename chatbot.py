@@ -17,7 +17,12 @@ class Chatbot:
         self.model = model
         self.exchange_count = 0  # 대화 횟수를 추적
         self.summary = ""  # 대화 요약을 저장
+        self.ai_count=0 #ai 대화 횟수
+    
 
+    #사용자가 메시지를 self.context에 추가하는 함수
+    #message :사용자가 입력한 메시지
+    #대화 히스토리에 "role":"user"로 사용자의 메시지를 저장
     def add_user_message(self, message):
         self.context.append({"role": "user", "content": message})
     
@@ -111,6 +116,8 @@ class Chatbot:
                 print("Conversation ended naturally.")
          
 
+'''
 if __name__ == "__main__":
     chatbot = Chatbot("gpt-4")
     chatbot.chat_loop()
+'''
