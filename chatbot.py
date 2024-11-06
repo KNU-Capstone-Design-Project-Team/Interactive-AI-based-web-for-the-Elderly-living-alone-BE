@@ -79,7 +79,7 @@ class Chatbot:
             # 사용자 입력을 먼저 받음
             #user_input = self.get_input(600, "User: ")
             if self.exchange_count == 0:
-                user_input = "너가 처음 질문하는 것처럼 일상적인 질문을 시작해줘.한번에 한 문장만 말해.일상적인 질문의 키워드는 식사, 날씨, 취미, 음악, 외출, 반려동물, 운동, 장보기, 추억등이 있어. "
+                user_input = "이 말에 대답하지 말고 너가 처음 질문하는 것처럼 일상적인 질문을 시작해줘.한번에 한 문장만 말해.일상적인 질문의 키워드는 식사, 날씨, 취미, 음악, 외출, 반려동물, 운동, 장보기, 추억등이 있어. "
             elif self.exchange_count == 1:
                 user_input = self.get_input(3600, "User: ")
                 self.exchange_count +=1
