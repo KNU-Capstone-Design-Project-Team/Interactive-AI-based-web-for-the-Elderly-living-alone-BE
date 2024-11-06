@@ -12,7 +12,7 @@ def requestContextStr(userInput):
     # contextStr에 저장하기
     
     storeContext(contextStr)
-
+'''
 latestTaskStatus = {
     "status": "incomplete",
     "task": None,
@@ -28,7 +28,7 @@ def myScheduledTask():
 
 def sendTask():
     return latestTaskStatus.get('task')
-
+'''
 
 '''
 # push api 설정 -> 알림 보내기

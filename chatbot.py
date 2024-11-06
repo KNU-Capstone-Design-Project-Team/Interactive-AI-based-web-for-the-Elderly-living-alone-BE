@@ -51,11 +51,6 @@ class Chatbot:
         self.model = model
         self.exchange_count = 0  # 대화 횟수를 추적
         self.ai_count=0 #ai 대화 횟수
-
-    def chatBotInit(self):
-        self.context = [{"role": "system", "content": content}] #프롬프트 엔지니어링으로 지금까지의 내역 전부를 잊어버리라고 명령
-        self.exchange_count = 0  # 대화 횟수를 추적
-        self.ai_count = 0  # ai 대화 횟수
     
 
     #사용자가 메시지를 self.context에 추가하는 함수
@@ -167,6 +162,8 @@ class Chatbot:
             "responseTime": time
         }
 
+'''
 if __name__ == "__main__":
     chatbot = Chatbot("gpt-4")
     chatbot.chat_loop()
+'''
