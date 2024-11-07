@@ -21,7 +21,7 @@ def recent10DaysNotice(N, loginId):
             for j in range(i, N): noticeList.append(None)
             break
         else:
-            noticeList.append(temp.get('responseRatio'))
+            noticeList.append([previousDay, temp.get('responseRatio')])
 
     return noticeList
 
@@ -36,7 +36,7 @@ def getNameListByLoginId(loginId):
     return names
 
 # /stats
-def getResponseTimeListByLoginId(nameList):
+def getResponseRatioListByLoginId(nameList):    #(date, responseRatio)
     responseTimeList = []
 
     for i in nameList:
@@ -52,9 +52,10 @@ def getResponseTimeListByLoginId(nameList):
 23시~24시까지 -> 오늘 응답률
 
 '''
-def getResponseTimesAndNamesBySeniors(supervisorLoginId):
+def getResponseRatioAndNamesBySeniors(supervisorLoginId):
     result = []
     prevDate = -1
+    date = ""
     names = getNameListByLoginId(supervisorLoginId)
     for i in range(len(names)):
         temp2 = db.SeniorUser.find_one({"loginId": names[i][1]})
@@ -69,5 +70,6 @@ def getResponseTimesAndNamesBySeniors(supervisorLoginId):
         temp = db.Conversation.find_one({"SeniorUser_id": temp2.get('SeniorUser_id')}, sort=[{"date", prevDate}])
 
         result.append([names[i], temp.get('responseRatio')])
+        date = temp.get('date')
 
-    return temp.get('date'), result
+    return date, result

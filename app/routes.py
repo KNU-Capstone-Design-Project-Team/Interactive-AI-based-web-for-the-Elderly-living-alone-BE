@@ -5,16 +5,16 @@ from app.models.loginInfoModels import *
 from app.models.noticeModels import *
 from app.services.chatServices import *
 from chatbot import Chatbot
+from chatbot1 import Chatbot1
 from datetime import datetime
 import asyncio
 import signal
-
 
 main = Blueprint('main', __name__)
 
 
 chatHistory = []
-myChatBot = Chatbot("gpt-4")
+myChatBot = Chatbot1("gpt-4")
 # 플래그 변수를 사용하여 이미 응답이 반환되었는지 추적
 response_sent = False
 
@@ -452,6 +452,11 @@ def seniorRecommend(loginId):
                 프론트에서 category마다 요청이 들어오면
                 해당되는 것들의 데이터를 보내 줌.(list에는 postId는 꼭 넣어줘야 함.)***
                 
+                #__init__에서 공공데이터를 받아옴 -> PreferredCategory, MatchProgram을 이미 구별해놓은 상태
+                #그래서 전체 : "RegionalProgram"에서 date가 오늘로부터 가장 빠른 것부터 최대 30개를 보내줌.
+                # 위치 : "MatchProgram"에서 date가 오늘로부터 가장 빠른 것부터 최대 30개를 보내줌.
+                # 취향 : "PreferredCategory"에서 date가 오늘로부터 가장 빠른 것부터 최대 30개를 보내줌.
+                
                2. post를 request로 받아옴
                 postId를 request로 얻어오면 이를 redirection하도록 값을 넘겨줌
                 
@@ -461,6 +466,20 @@ def seniorRecommend(loginId):
                 이런식으로 넘겨주기
             '''
 
+            # 1. 전체, 위치, 취향
+            category = request.json.get("category")
+
+            if category == 'total':
+                pass #전체 30개
+            elif category == 'location':
+                pass #전체에서 지역을 search해서 가장 최근것들을 30개 받아옴
+            #단 지금은 hardcoding 되어 있으므로 임의의 지역을 search해서 최대 30개를 가져옴
+            elif category == 'preference':
+                pass #전체에서 취향(여러 개)을 search해서 가장 최근 것들으 최대 30개 받아옴
+            #단 지름은 hardcoding 되어 있으므로 01028435533의 취향을
+            else:
+                return jsonify({"error": "Invalid request format"}), 400
+            
             return jsonify({
                 "message": "성공적으로 ""POST"" 받았습니다."
             }), 200
@@ -514,7 +533,7 @@ def supervisorNotice(loginId):
                 }), 400
             
             # 보호자당 senior들의 알림을 23시 전까지 유지
-            date, seniorList = getResponseTimesAndNamesBySeniors(loginId)
+            date, seniorList = getResponseRatioAndNamesBySeniors(loginId)
 
             return jsonify({
                 "date": date,
@@ -531,21 +550,21 @@ def supervisorNotice(loginId):
         return jsonify({"error": str(e)}), 500
 
 # 날짜 보내주는 거 추가하기
-@main.route('/supervisor/<loginId>/stats', methods=['POST', 'GET']) #ok
+@main.route('/supervisor/<loginId>/stats', methods=['GET']) #ok
 def supervisorStats(loginId):
     try:
         if request.method == 'GET':
             if (isLoginIdInDB(loginId) == True):
-                nameList = getNameListByLoginId(loginId)
-                nameList2 = []
-                for i in nameList: nameList2.append(i[0])
+                nameList = getNameListByLoginId(loginId)    #(이름,loginId)
+                nameList2 = []  #(이름)
+                for i in nameList:  nameList2.append(i[0])
 
-                responseTimeList = getResponseTimeListByLoginId(nameList)
+                responseRatioList = getResponseRatioListByLoginId(nameList)
 
                 return jsonify({
                     "names": nameList2,
-                    "responseTimes": responseTimeList,
-                    "message": "" + loginId + "exists and names, responseTime is sent successfully."
+                    "responseRatio": responseRatioList,
+                    "message": "" + loginId + "exists and names, responseRatio is sent successfully."
                 }), 200
             else:
                 return jsonify({
