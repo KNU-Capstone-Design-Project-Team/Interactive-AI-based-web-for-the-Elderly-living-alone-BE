@@ -307,8 +307,8 @@ def poll():
     return jsonify({"message": message}), 200
 '''
 # Long Polling 엔드포인트
-@main.route('/chatPoll', methods=['GET'])   #일단 예외처리 빼고 ok
-async def poll():
+@main.route('/chatLongPoll', methods=['GET'])   #일단 예외처리 빼고 ok
+async def longPoll():
     # 새로운 메시지를 대기하고 반환하는 함수를 호출
     while not messageQueue:
         '''
@@ -320,6 +320,19 @@ async def poll():
     # 새로운 메시지가 있으면 큐에서 제거하여 반환
     message = messageQueue.pop(0)
     return jsonify({"message": message}), 200
+
+@main.route('/chatShortPoll', methods=['GET'])   #일단 예외처리 빼고 ok
+async def shortPoll():
+    try:
+    # 새로운 메시지가 있으면 큐에서 제거하여 반환
+        if (messageQueue):
+            message = messageQueue.pop(0)
+            return jsonify({"message": message}), 200
+        else:
+            return jsonify({"error": "not message"}), 400
+    # 서버 내부 오류 발생 시 500 에러 반환
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 '''
 # Flask 서버 종료 시 플래그 업데이트
 def shutdown_handler(*args):
@@ -357,17 +370,17 @@ def seniorChat(loginId):
         try:
             # 혹시 모를 예외처리
             if myChatBot.exchange_count >= 9:  # 9번 대화 교환
-                print(f"대화 횟수를 초과하였으므로 대화를 할 수 없습니다.")
+                print(f"The number of conversations has been exceeded.")
                 return jsonify({
-                    "error": "대화 횟수를 초과하였으므로 대화를 할 수 없습니다."
-                }), 400
+                    "error": "The number of conversations has been exceeded."
+                }), 429
 
             # AI가 먼저 질문을 시작하는건 이미 비동기로 받아옴
             if myChatBot.exchange_count == 0:  # 대화가 끝나서 초기화된 상태 -> 대화를 할 수 없는 상태
-                print(f"대화 횟수를 초과하였으므로 대화를 할 수 없습니다.")
+                print(f"The number of conversations has been exceeded.")
                 return jsonify({
-                    "error": "대화 횟수를 초과하였으므로 대화를 할 수 없습니다."
-                }), 400
+                    "error": "The number of conversations has been exceeded."
+                }), 429
 
             else:  # 첫 질문이 아닐 때
                 userInput = request.json.get('userInput')   # request받아오기
@@ -376,8 +389,8 @@ def seniorChat(loginId):
                     if userInput == '\n':
                         # 대화 종료한 상태(응답안햇다고 저장하기 -> 사실 코드짤필요x 이미 None임.
                         return jsonify({
-                            "message": "공백이 반환되어 대화가 종료됩니다. 해당 시간의 대화에 응답하지 않았습니다."
-                        }), 300
+                            "message": "Accept the blank request and end the conversation."
+                        }), 204
                     else:
                         updateResponseTimeInQuestion(datetime.now())
 
@@ -386,8 +399,8 @@ def seniorChat(loginId):
                     대화 종료한 상태를 저장하기
                     '''
                     return jsonify({
-                        "message": "공백이 반환되어 대화가 종료됩니다."
-                    }), 300
+                        "message": "Accept the blank request and end the conversation."
+                    }), 204
 
                 # 사용자가 입력을 했다면 대화 히스토리에 추가
                 myChatBot.add_user_message(userInput)
@@ -443,7 +456,7 @@ def seniorRecommend(loginId):
                 postId를 request로 얻어오면 이를 redirection하도록 값을 넘겨줌
                 
                 postId = ...(db에서 가져옴.)
-                return redirect(url_for(seniorRecommendPost, data=json.dumps(postId)))
+                return redirect(url_for('main.seniorRecommendPost', postId='1'))
                 
                 이런식으로 넘겨주기
             '''
