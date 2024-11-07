@@ -1,8 +1,10 @@
 import os
-import threading
-from queue import Queue, Empty
 import openai
 from dotenv import load_dotenv
+from gtts import gTTS
+import pygame
+import chatbot
+import speech_recognition as sr  # For STT
 
 # OpenAI API 키 설정
 load_dotenv()
@@ -17,12 +19,7 @@ class Chatbot:
         self.model = model
         self.exchange_count = 0  # 대화 횟수를 추적
         self.summary = ""  # 대화 요약을 저장
-        self.ai_count=0 #ai 대화 횟수
-    
 
-    #사용자가 메시지를 self.context에 추가하는 함수
-    #message :사용자가 입력한 메시지
-    #대화 히스토리에 "role":"user"로 사용자의 메시지를 저장
     def add_user_message(self, message):
         self.context.append({"role": "user", "content": message})
     
@@ -46,29 +43,34 @@ class Chatbot:
         return self.context[-1]['content']
     
     def get_input(self, timeout, prompt):
-        print(prompt, end="", flush=True)
-        input_queue = Queue()
-        
-        def read_input():
-            input_text = input()
-            input_queue.put(input_text)
-        
-        input_thread = threading.Thread(target=read_input)
-        input_thread.start()
-        input_thread.join(timeout)
-        
-        if input_thread.is_alive():
-            print("\n시간이 초과되었습니다.")
-            input_thread.join()
-            return "\n"
-        
-        try:
-            return input_queue.get_nowait()
-        except Empty:
-            return "\n"
+        recognizer = sr.Recognizer()
+        attempts = 0  # 입력 시도 횟수
+
+        while attempts < 3:
+            with sr.Microphone() as source:
+                # 주변 소음을 1초 동안 분석하여 인식 조정
+                recognizer.adjust_for_ambient_noise(source, duration=1)
+                print(prompt + " (Listening...)")
+                try:
+                    audio = recognizer.listen(source, timeout=timeout)
+                    input_text = recognizer.recognize_google(audio, language="ko-KR")
+                    print("User (voice):", input_text)
+                    return input_text
+                except sr.WaitTimeoutError:
+                    print("시간이 초과되었습니다.")
+                except sr.UnknownValueError:
+                    print("음성을 인식하지 못했습니다. 다시 시도해주세요.")
+                except sr.RequestError:
+                    print("STT 서비스 오류가 발생했습니다.")
+
+                # 입력 시도 실패 시 시도 횟수 증가
+                attempts += 1
+
+        # 모든 시도가 실패하면 빈 문자열 반환
+        print("입력을 여러 번 시도했으나 실패했습니다.")
+        return ""
 
     def generate_summary(self):
-        # 모든 대화를 요약 요청에 포함
         summary_request = [{"role": "system", "content": "이 대화를 50자 이내로 요약해줘."}]
         summary_request += self.context  # 전체 대화를 요약 요청에 포함
         response = openai.ChatCompletion.create(
@@ -79,22 +81,32 @@ class Chatbot:
         self.summary = response['choices'][0]['message']['content']
         return self.summary  # 요약 문자열 반환
 
+class TTSChatbot(Chatbot):
+    def text_to_speech(self, text):
+        # TTS 변환 및 파일 저장
+        tts = gTTS(text=text, lang='ko')
+        tts.save("response.mp3")
+        
+        # pygame을 사용해 mp3 파일 재생
+        pygame.mixer.init()
+        pygame.mixer.music.load("response.mp3")
+        pygame.mixer.music.play()
+        
+        # 오디오가 끝날 때까지 대기
+        while pygame.mixer.music.get_busy():
+            continue
+
+        pygame.mixer.quit()
+        os.remove("response.mp3")  # 재생 후 파일 삭제
+
     def chat_loop(self):
         while self.exchange_count < 11:
-            # 사용자 입력을 먼저 받음
-            #user_input = self.get_input(600, "User: ")
             if self.exchange_count == 0:
-                user_input = "이 말에 대답하지 말고 너가 처음 질문하는 것처럼 일상적인 질문을 시작해줘.한번에 한 문장만 말해.일상적인 질문의 키워드는 식사, 날씨, 취미, 음악, 외출, 반려동물, 운동, 장보기, 추억등이 있어. "
-            elif self.exchange_count == 1:
-                user_input = self.get_input(3600, "User: ")
-                self.exchange_count +=1
-            elif self.exchange_count ==9:
-                user_input = self.get_input(600, "User: ")
-                user_input = user_input+"이제 질문을 하지 말고 공감을 하며 대화를 끝내줘."
-                self.exchange_count +=1
+                user_input = "너가 처음 질문하는 것처럼 일상적인 질문을 시작해줘. 한번에 한 문장만 말해. 일상적인 질문의 키워드는 식사, 날씨, 취미, 음악, 외출, 반려동물, 운동, 장보기, 추억 등이 있어."
+            elif self.exchange_count == 9:
+                user_input = self.get_input(600, "User: ") + " 이제 질문을 하지 말고 공감을 하며 대화를 끝내줘."
             else:
                 user_input = self.get_input(600, "User: ")
-                self.exchange_count +=1
 
             if user_input.strip() == '':
                 summary = self.generate_summary()  # 요약 문자열 받기
@@ -102,22 +114,19 @@ class Chatbot:
                 break
             else:
                 self.add_user_message(user_input)
-                #self.exchange_count += 1
-            
-            # 사용자 입력 후에만 AI 응답을 생성
+
             response = self.send_request()
             self.add_response(response)
-            print("AI:", self.get_response_content())
+            ai_response = self.get_response_content()
+            print("AI:", ai_response)
+            self.text_to_speech(ai_response)
             self.exchange_count += 1
 
             if self.exchange_count == 11:
-                summary = self.generate_summary()  # 요약 문자열 받기
+                summary = self.generate_summary()
                 print("Summary:", summary)
                 print("Conversation ended naturally.")
-         
-
 
 if __name__ == "__main__":
-    chatbot = Chatbot("gpt-4")
+    chatbot = TTSChatbot("gpt-4")
     chatbot.chat_loop()
-    
