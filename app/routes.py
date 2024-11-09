@@ -441,6 +441,7 @@ def seniorRecommend(loginId):
                 DB에 저장한 후, 하는 걸 하루 단위로 하는 방식으로 코딩하기
             '''
 
+
             return jsonify({
                 "message": "성공적으로 ""GET"" 받았습니다."
             }), 200
@@ -495,7 +496,7 @@ def seniorRecommend(loginId):
 #post마다 id를 부여하고(db에 각 프로그램마다 넣을때 이미 id를 부여했음.) 이를 받아옴
 #/senior/<loginId>/recommend에서 리디렉션할 때 postId도 같이 넘겨줌
 @main.route('/senior/<loginId>/recommend/<int:postId>', methods=['GET'])
-def seniorRecommendPost(loginId):
+def seniorRecommendPost(loginId, postId):
     try:
         if request.method == 'GET':
             '''
