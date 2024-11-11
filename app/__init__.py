@@ -11,6 +11,7 @@ from apscheduler.jobstores.base import JobLookupError
 from app.models.chatModels import *
 from app.routes import scheduledTask, popAllMessageQueue
 
+from flask_cors import CORS
 import time
 
 '''
@@ -21,6 +22,9 @@ import time
 def create_app():
 
     app = Flask(__name__)
+
+    app.logger.debug("Flask app created")
+    CORS(app, resources={r"/*": {"origins": "*"}})  # 모든 출처에서의 접근을 허용
     scheduler = BackgroundScheduler(timezone='Asia/Seoul')
 
     '''
