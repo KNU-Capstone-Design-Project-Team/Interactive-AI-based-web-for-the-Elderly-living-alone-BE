@@ -124,3 +124,37 @@ class TTSChatbot(Chatbot):
 if __name__ == "__main__":
     chatbot = TTSChatbot("gpt-4")
     chatbot.chat_loop()
+
+"""
+# tts.py
+->나중에 프론트랑 백엔드랑 연결하고 난 후 쓸려고 class 만들어놓음.
+
+tts class로 정리
+
+from gtts import gTTS
+import os
+from chatbot import Chatbot  # Chatbot 클래스 가져오기
+
+class TTS:
+    def __init__(self, chatbot_model="gpt-4", lang="ko"):
+        self.chatbot = Chatbot(chatbot_model)  # Chatbot 인스턴스 생성
+        self.lang = lang  # 언어 설정 (한국어)
+
+    def generate_audio(self, text, filename="response.mp3"):
+        "텍스트를 음성으로 변환하고 파일로 저장합니다."
+        tts = gTTS(text=text, lang=self.lang)
+        tts.save(filename)
+        os.system(f"start {filename}")  # Windows에서 음성 재생, Mac/Linux의 경우 "open {filename}" 또는 "afplay {filename}" 사용
+        print(f"음성이 '{filename}' 파일에 저장되었습니다.")
+        
+#get_response_with_audio 메서드를 통해 Chatbot의 응답을 텍스트로 받아 음성 변환(TTS)합니다.
+    def get_response_with_audio(self, user_input):
+        "Chatbot 응답을 받고 TTS로 음성 변환합니다."
+        response = self.chatbot.get_response(user_input)
+        if response:
+            print("Chatbot 응답:", response)  # 응답 출력
+            self.generate_audio(response)  # 응답을 음성으로 변환
+        else:
+            print("대화가 종료되었습니다.")
+
+"""

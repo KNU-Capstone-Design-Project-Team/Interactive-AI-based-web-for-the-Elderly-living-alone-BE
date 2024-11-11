@@ -64,5 +64,21 @@ class Chatbot:
 
 if __name__ == "__main__":
     chatbot = Chatbot("gpt-4")
-    
+
+"""
+# tts_test.py
+tts class 사용하는 방법
+
+from tts import TTS
+
+if __name__ == "__main__":
+    tts = TTS("gpt-4")  # TTS 인스턴스 생성
+    while True:->여기에서부터는 그냥 잘 되는지 확인하는 코드
+        user_input = input("대화를 입력하세요 (종료하려면 '끝' 입력): ")
+        if user_input.lower() == "끝":
+            print("대화를 종료합니다.")
+            break
+        tts.get_response_with_audio(user_input)
+#get_response_with_audio 메서드를 통해 Chatbot의 응답을 텍스트로 받아 음성 변환(TTS)함.
+"""
    
