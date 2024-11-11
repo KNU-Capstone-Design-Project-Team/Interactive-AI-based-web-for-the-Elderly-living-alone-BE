@@ -586,8 +586,8 @@ def supervisorStats(loginId):
                 responseRatioList = getResponseRatioListByLoginId(nameList)
 
                 return jsonify({
-                    "names": nameList,
-                    "responseRatio": responseRatioList,
+                    "nameList": nameList,
+                    "responseRatioList": responseRatioList,
                     "message": "" + loginId + "exists and names, responseRatio is sent successfully."
                 }), 200
             else:
