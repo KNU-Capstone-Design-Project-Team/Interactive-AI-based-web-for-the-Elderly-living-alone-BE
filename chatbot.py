@@ -1,34 +1,27 @@
 import os
-import threading
-from queue import Queue, Empty
 import openai
 from dotenv import load_dotenv
 
-# OpenAI API 키 설정
+
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# 프롬프트 메시지
-content = """당신은 독거노인의 말동무 역할입니다. 사투리나 오타가 있을 수 있으니, 이를 바르게 이해하고 질문을 이어가세요. 띄어쓰기가 없거나 문장이 어색해도 의미를 파악해 자연스럽게 대화를 진행하세요. 한번 대화할때 50자 이내로 답해야합니다."""
+content = """독거노인 말동무 역할 사투리·오타 이해,띄어쓰기 없거나 어색해도 의미 파악 후 질문 이거가기 답변은 50자 이내"""
 
 class Chatbot:
     def __init__(self, model):
         self.context = [{"role": "system", "content": content}]
         self.model = model
-        self.exchange_count = 0  # 대화 횟수를 추적
-        self.summary = ""  # 대화 요약을 저장
-        self.ai_count=0 #ai 대화 횟수
-    
+        self.exchange_count = 0  
+        self.summary = "" 
+        self.ai_count = 0  
 
-    #사용자가 메시지를 self.context에 추가하는 함수
-    #message :사용자가 입력한 메시지
-    #대화 히스토리에 "role":"user"로 사용자의 메시지를 저장
     def add_user_message(self, message):
         self.context.append({"role": "user", "content": message})
-    
+
     def send_request(self):
         response = openai.ChatCompletion.create(
-            model=self.model, 
+            model=self.model,
             messages=self.context,
             temperature=0.7,
             max_tokens=100,
@@ -44,80 +37,48 @@ class Chatbot:
 
     def get_response_content(self):
         return self.context[-1]['content']
-    
-    def get_input(self, timeout, prompt):
-        print(prompt, end="", flush=True)
-        input_queue = Queue()
-        
-        def read_input():
-            input_text = input()
-            input_queue.put(input_text)
-        
-        input_thread = threading.Thread(target=read_input)
-        input_thread.start()
-        input_thread.join(timeout)
-        
-        if input_thread.is_alive():
-            print("\n시간이 초과되었습니다.")
-            input_thread.join()
-            return "\n"
-        
-        try:
-            return input_queue.get_nowait()
-        except Empty:
-            return "\n"
 
-    def generate_summary(self):
-        # 모든 대화를 요약 요청에 포함
-        summary_request = [{"role": "system", "content": "이 대화를 50자 이내로 요약해줘."}]
-        summary_request += self.context  # 전체 대화를 요약 요청에 포함
-        response = openai.ChatCompletion.create(
-            model=self.model,
-            messages=summary_request,
-            max_tokens=50
-        )
-        self.summary = response['choices'][0]['message']['content']
-        return self.summary  # 요약 문자열 반환
+   
+    def get_response(self, user_input):
+        if self.exchange_count >= 11:
+            return None
 
-    def chat_loop(self):
-        while self.exchange_count < 11:
-            # 사용자 입력을 먼저 받음
-            #user_input = self.get_input(600, "User: ")
-            if self.exchange_count == 0:
-                user_input = "이 말에 대답하지 말고 너가 처음 질문하는 것처럼 일상적인 질문을 시작해줘.한번에 한 문장만 말해.일상적인 질문의 키워드는 식사, 날씨, 취미, 음악, 외출, 반려동물, 운동, 장보기, 추억등이 있어. "
-            elif self.exchange_count == 1:
-                user_input = self.get_input(3600, "User: ")
-                self.exchange_count +=1
-            elif self.exchange_count ==9:
-                user_input = self.get_input(600, "User: ")
-                user_input = user_input+"이제 질문을 하지 말고 공감을 하며 대화를 끝내줘."
-                self.exchange_count +=1
-            else:
-                user_input = self.get_input(600, "User: ")
-                self.exchange_count +=1
 
-            if user_input.strip() == '':
-                summary = self.generate_summary()  # 요약 문자열 받기
-                print("Summary:", summary)
-                break
-            else:
-                self.add_user_message(user_input)
-                #self.exchange_count += 1
-            
-            # 사용자 입력 후에만 AI 응답을 생성
-            response = self.send_request()
-            self.add_response(response)
-            print("AI:", self.get_response_content())
-            self.exchange_count += 1
+        if self.exchange_count == 0:
+            user_input = "답하지 말고 먼저 일상적인 질문 한 문장 시작"
+        
+        elif self.exchange_count == 9:
+            user_input += "질문 그만,공감하며 대화 끝내"
+        
+        
+        self.add_user_message(user_input)
+        self.exchange_count += 1
 
-            if self.exchange_count == 11:
-                summary = self.generate_summary()  # 요약 문자열 받기
-                print("Summary:", summary)
-                print("Conversation ended naturally.")
-         
+       
+        response = self.send_request()
+        self.add_response(response)
+        
+       
+        return self.get_response_content()
 
 
 if __name__ == "__main__":
     chatbot = Chatbot("gpt-4")
-    chatbot.chat_loop()
-    
+
+"""
+# tts_test.py
+tts class 사용하는 방법
+
+from tts import TTS
+
+if __name__ == "__main__":
+    tts = TTS("gpt-4")  # TTS 인스턴스 생성
+    while True:->여기에서부터는 그냥 잘 되는지 확인하는 코드
+        user_input = input("대화를 입력하세요 (종료하려면 '끝' 입력): ")
+        if user_input.lower() == "끝":
+            print("대화를 종료합니다.")
+            break
+        tts.get_response_with_audio(user_input)
+#get_response_with_audio 메서드를 통해 Chatbot의 응답을 텍스트로 받아 음성 변환(TTS)함.
+"""
+   
