@@ -1,4 +1,6 @@
 import datetime
+
+from bson import ObjectId
 from flask import Flask
 from app.models.chatModels import *
 from app.scheduler import *
@@ -7,7 +9,8 @@ import threading
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.base import JobLookupError
 from app.models.chatModels import *
-from app.routes import scheduledTask
+from app.routes import scheduledTask, popAllMessageQueue
+
 import time
 
 '''
@@ -40,21 +43,38 @@ def create_app():
                 minute=0
             )
 
-    '''
-    def scheduleJobs():
-        # 매일 8시, 10시, 12시, 14시, 16시, 18시, 20시, 22시에 실행
-        hours = [7, 9, 11, 13, 15, 17, 19, 21]
+    def popMessageQueue():
+        hours = [9, 11, 13, 15, 17, 19, 21, 23]
 
         for hour in hours:
 
             scheduler.add_job(
-                id=f"create question at {hour}",
-                func=scheduledTask,
+                id=f"pop all messagequeue at {hour}, 50",
+                func=popAllMessageQueue,
                 trigger="cron",
                 hour=hour,
-                minute=50
+                minute=53
             )
+
+    def createConversatationTemp():
+        # 현 날짜의 Conversation 생성하고 첫 질문 생성
+        OI = ObjectId("66fff220216270d1981d8795")
+        createConversation(OI)
+
+    ''' 
+    *********** 추가할 내용 ***********8(위에 메소드랑 같이 수정봐야 함.)
+    토근 관련해서 개발하면 그때 conversation(seniorUser)에 저걸 어떻게 넣어서 스케쥴링을 할지 정하기...
     '''
+    def createsConversation():
+        # 매일 7시30에 Conversation 생성
+        scheduler.add_job(
+            id=f"create conversation at 7:30",
+            func=createConversatationTemp,
+            trigger="cron",
+            hour=7,
+            minute=30
+        )
+
 
     def calculateRatio():
         '''
@@ -92,10 +112,6 @@ def create_app():
     db = client.ElderCareNet
 
 
-    # 현 날짜의 Conversation 생성하고 첫 질문 생성
-    createConversation(None)
-
-
     #원래는 스케줄러 타고 실행되어야하는 init 첫 question 생성 함수인데
     # 개발을 위해서 여기에 임의로 호출함
     '''
@@ -106,8 +122,10 @@ def create_app():
 
     # Scheduling
     asyncFromFront()
-    #scheduleJobs()
+    popMessageQueue()
     calculateRatio()
+    createsConversation()
+
     '''
     # python console 실행 테스트용
     try:

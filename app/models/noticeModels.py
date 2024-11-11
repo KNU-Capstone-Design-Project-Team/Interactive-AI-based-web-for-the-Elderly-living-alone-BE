@@ -12,7 +12,7 @@ def recent10DaysNotice(N, loginId):
 
     today = datetime.datetime.now()
     for i in range(N):
-        previousDay = today + datetime.timedelta(days=(i))
+        previousDay = today - datetime.timedelta(days=(i))
         previousDay = previousDay.strftime('%Y.%m.%d')
         temp2 = db.SeniorUser.find_one({"loginId": loginId})
         temp = db.Conversation.find_one({"SeniorUser_id": temp2.get('SeniorUser_id')}, {"date":previousDay})
@@ -31,6 +31,7 @@ def getNameListByLoginId(loginId):
     seniorList = db.SeniorUser.find({"SupervisorCode_id": supervisor.get('SupervisorCode_id')})
 
     for i in seniorList:
+        print(i.get('name'))
         names.append((i.get('name'), i.get('loginId')))
 
     return names
@@ -54,22 +55,22 @@ def getResponseRatioListByLoginId(nameList):    #(date, responseRatio)
 '''
 def getResponseRatioAndNamesBySeniors(supervisorLoginId):
     result = []
-    prevDate = -1
     date = ""
     names = getNameListByLoginId(supervisorLoginId)
+
     for i in range(len(names)):
         temp2 = db.SeniorUser.find_one({"loginId": names[i][1]})
 
         nowHour = datetime.datetime.now().hour
         if 0 <= nowHour <= 22:  # 0시0분0초~22시59분59초
-            prevDate = -2
+            temp = db.Conversation.find_one({"SeniorUser_id": temp2.get('_id')}, sort=[{"date", -1}], skip=1)
         elif nowHour == 23:    # 23시0분0초~23시59분59초까지
-            prevDate = -1
-        else:   pass
+            temp = db.Conversation.find_one({"SeniorUser_id": temp2.get('_id')}, sort=[{"date", -1}])
+        else:
+            temp = {"responseRatio" : 0, "date" : datetime.datetime.now()}
 
-        temp = db.Conversation.find_one({"SeniorUser_id": temp2.get('SeniorUser_id')}, sort=[{"date", prevDate}])
 
-        result.append([names[i], temp.get('responseRatio')])
+        result.append([names[i][0], temp.get('responseRatio')])
         date = temp.get('date')
 
     return date, result
