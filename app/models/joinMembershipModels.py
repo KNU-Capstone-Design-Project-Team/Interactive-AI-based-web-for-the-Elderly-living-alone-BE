@@ -29,3 +29,33 @@ def produceConnectionNum():
 
 #test= produceConnectionNum()
 #print(test)
+
+# 노인 회원 정보를 디비에 저장
+def add_senior_member(username, login_id, password, phone_number, birth_date, address, interests, guardian_phone):
+    senior_data = {
+        "username": username,
+        "login_id": login_id,
+        "password": password,  # 암호화 적용 해야함.
+        "phone_number": phone_number,
+        "birth_date": birth_date,
+        "address": address,
+        "interests": interests,
+        "guardian_phone": guardian_phone,
+        "created_at": datetime.now()
+    }
+
+    db.seniors.insert_one(senior_data)
+    return senior_data  # 저장된 데이터를 반환
+
+#보호자 회원 정보를 디비에 저장
+def add_guardian_member(username, login_id, password, phone_number):
+    senior_data = {
+        "username": username,
+        "login_id": login_id,
+        "password": password,  # 암호화 적용 해야함.
+        "phone_number": phone_number,
+        "created_at": datetime.now()
+    }
+
+    db.seniors.insert_one(senior_data)
+    return senior_data  # 저장된 데이터를 반환
