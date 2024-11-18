@@ -25,6 +25,10 @@ response_sent = False
     * JWT 토큰 라이브러리를 사용해서 인증 상태를 유지하는 거 메소드마다 추가하기
 '''
 
+@main.route('/test', methods=['GET', 'POST'])
+def test():
+    return jsonify({"message":1}), 200
+
 
 @main.route('/', methods=['POST'])  #jwt 토큰 관련 추가
 def login():
