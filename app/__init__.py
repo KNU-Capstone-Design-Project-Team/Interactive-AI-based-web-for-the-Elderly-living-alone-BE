@@ -1,23 +1,21 @@
 import datetime
 
 from bson import ObjectId
-from flask import Flask
+from flask import Flask, request
 from app.models.chatModels import *
 from app.scheduler import *
-from flasgger import Swagger
-import threading
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.base import JobLookupError
 from app.models.chatModels import *
 from app.routes import scheduledTask, popAllMessageQueue
-
 from flask_cors import CORS
-import time
 
 '''
 전체적으로 추가 구현해야할 사항:
     * 공공데이터 api를 써서 목록들을 하루 단위로 DB에 받아 옴.
 '''
+
+
 
 def create_app():
 
@@ -25,6 +23,16 @@ def create_app():
 
     app.logger.debug("Flask app created")
     CORS(app, resources={r"/*": {"origins": "*"}})  # 모든 출처에서의 접근을 허용
+
+    @app.before_request
+    def handle_options():
+        if request.method == 'OPTIONS':
+            response = app.response_class()
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            return response
+
     scheduler = BackgroundScheduler(timezone='Asia/Seoul')
 
     '''
@@ -115,6 +123,8 @@ def create_app():
     client = MongoClient(os.getenv("MONGO_URI"))
     db = client.ElderCareNet
 
+    # 임시로 conversation 서버 시작하면 무조건 만들도록 저장해놨음
+    createConversatationTemp()
 
     #원래는 스케줄러 타고 실행되어야하는 init 첫 question 생성 함수인데
     # 개발을 위해서 여기에 임의로 호출함

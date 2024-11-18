@@ -518,6 +518,11 @@ def seniorRecommend(loginId):
 def seniorRecommendPost(loginId, postId):
     try:
         if request.method == 'GET':
+            # loginId가 실제 user인지 확인
+            if (isLoginIdInDB(loginId) == False):
+                return jsonify({
+                    "error": "" + loginId + "does not exists."
+                }), 400
             '''
             postid 받아오고, 유효성 검사하고, 이 post의 모든 것들을 json 데이터로 보내주기
             '''
