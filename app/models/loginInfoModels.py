@@ -1,11 +1,6 @@
 import os
-from dotenv import load_dotenv
-from datetime import datetime, timedelta
-from flask import jsonify
 from pymongo import MongoClient
 
-
-load_dotenv()
 client = MongoClient(os.getenv("MONGO_URI"))
 
 # 현재 DB 내에 해당 유저 아이디가 존재하는지 Boolean으로 판단함.
