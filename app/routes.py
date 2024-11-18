@@ -2,10 +2,12 @@ from flask import Blueprint, request, jsonify, url_for, redirect
 from app.models.chatModels import *
 from app.models.joinMembershipModels import *
 from app.services.joinMembershipServices import *
+from app.models.localProgramModels import *
 from app.models.loginInfoModels import *
 from app.models.noticeModels import *
 from app.services.chatServices import *
 from chatbot import Chatbot
+from chatbot1 import Chatbot1
 from datetime import datetime
 import asyncio
 import signal
@@ -15,7 +17,7 @@ main = Blueprint('main', __name__)
 service = MembershipService()
 
 chatHistory = []
-myChatBot = Chatbot("gpt-4")
+myChatBot = Chatbot1("gpt-4")
 # 플래그 변수를 사용하여 이미 응답이 반환되었는지 추적
 response_sent = False
 
@@ -27,6 +29,10 @@ response_sent = False
 #에러 처리 공통 함수
 def error_response(message,status_code=400):
     return jsonify({"message":message}),status_code
+@main.route('/test', methods=['GET', 'POST'])
+def test():
+    return jsonify({"message":"1"}), 200
+
 
 @main.route('/', methods=['POST'])  #jwt 토큰 관련 추가
 def login():
@@ -223,7 +229,22 @@ def welcomeSupervisor(guidId):
 @main.route('/senior/<loginId>', methods=['POST', 'GET']) #ok-ok
 def seniorHome(loginId):
     try:
-        if request.method == 'POST':
+        if request.method == 'GET':
+            try:
+                if (isLoginIdInDB(loginId) == False):
+                    return jsonify({
+                        "error": "" + loginId + "does not exists."
+                    }), 400
+                else:
+                    return jsonify({
+                        "message": "" + loginId + "exists."
+                    }), 200
+
+            # 서버 내부 오류 발생 시 500 에러 반환
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+
+        elif request.method == 'POST':
             # 클라이언트로부터 받은 데이터를 처리
             action = request.json.get('action')
 
@@ -247,6 +268,21 @@ def seniorHome(loginId):
 @main.route('/supervisor/<loginId>', methods=['POST', 'GET']) #ok-ok
 def supervisorHome(loginId):
     try:
+        if request.method == 'GET':
+            try:
+                if (isLoginIdInDB(loginId) == False):
+                    return jsonify({
+                        "error": "" + loginId + "does not exists."
+                    }), 400
+                else:
+                    return jsonify({
+                        "message": "" + loginId + "exists."
+                    }), 200
+
+            # 서버 내부 오류 발생 시 500 에러 반환
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+
         if request.method == 'POST':
             # 클라이언트로부터 받은 데이터를 처리
             action = request.json.get('action')
@@ -291,6 +327,11 @@ def scheduledTask():    #ok
     messageQueue.append(myChatBot.get_response_content())  # queue에 사용자 입력을 push -> 담아놨다가 시간되면 ...
 
     print(f"create first question at time.")
+
+def popAllMessageQueue():
+    if messageQueue:
+        messageQueue.clear()
+
 '''
 # Long Polling 엔드포인트
 @main.route('/chatPoll', methods=['GET'])
@@ -305,19 +346,36 @@ def poll():
     return jsonify({"message": message}), 200
 '''
 # Long Polling 엔드포인트
-@main.route('/chatPoll', methods=['GET'])   #일단 예외처리 빼고 ok
-async def poll():
-    # 새로운 메시지를 대기하고 반환하는 함수를 호출
-    while not messageQueue:
-        '''
-        if shutdown_flag:  # 종료 플래그를 확인하여 루프 탈출
-            return jsonify({"error": "Server is shutting down"}), 503
-        '''
-        await asyncio.sleep(1)  # 메시지가 없을 때 대기
+@main.route('/chatLongPoll', methods=['GET'])   #일단 예외처리 빼고 ok
+async def longPoll():
+    try:
+        # 새로운 메시지를 대기하고 반환하는 함수를 호출
+        while not messageQueue:
+            '''
+            if shutdown_flag:  # 종료 플래그를 확인하여 루프 탈출
+                return jsonify({"error": "Server is shutting down"}), 503
+            '''
+            await asyncio.sleep(1)  # 메시지가 없을 때 대기
 
+        # 새로운 메시지가 있으면 큐에서 제거하여 반환
+        message = messageQueue.pop(0)
+        return jsonify({"message": message}), 200
+    # 서버 내부 오류 발생 시 500 에러 반환
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@main.route('/chatShortPoll', methods=['GET'])   #일단 예외처리 빼고 ok
+async def shortPoll():
+    try:
     # 새로운 메시지가 있으면 큐에서 제거하여 반환
-    message = messageQueue.pop(0)
-    return jsonify({"message": message}), 200
+        if (messageQueue):
+            message = messageQueue.pop(0)
+            return jsonify({"message": message}), 200
+        else:
+            return jsonify({"error": "not message"}), 400
+    # 서버 내부 오류 발생 시 500 에러 반환
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 '''
 # Flask 서버 종료 시 플래그 업데이트
 def shutdown_handler(*args):
@@ -355,17 +413,17 @@ def seniorChat(loginId):
         try:
             # 혹시 모를 예외처리
             if myChatBot.exchange_count >= 9:  # 9번 대화 교환
-                print(f"대화 횟수를 초과하였으므로 대화를 할 수 없습니다.")
+                print(f"The number of conversations has been exceeded.")
                 return jsonify({
-                    "error": "대화 횟수를 초과하였으므로 대화를 할 수 없습니다."
-                }), 400
+                    "error": "The number of conversations has been exceeded."
+                }), 429
 
             # AI가 먼저 질문을 시작하는건 이미 비동기로 받아옴
             if myChatBot.exchange_count == 0:  # 대화가 끝나서 초기화된 상태 -> 대화를 할 수 없는 상태
-                print(f"대화 횟수를 초과하였으므로 대화를 할 수 없습니다.")
+                print(f"The number of conversations has been exceeded.")
                 return jsonify({
-                    "error": "대화 횟수를 초과하였으므로 대화를 할 수 없습니다."
-                }), 400
+                    "error": "The number of conversations has been exceeded."
+                }), 429
 
             else:  # 첫 질문이 아닐 때
                 userInput = request.json.get('userInput')   # request받아오기
@@ -374,8 +432,8 @@ def seniorChat(loginId):
                     if userInput == '\n':
                         # 대화 종료한 상태(응답안햇다고 저장하기 -> 사실 코드짤필요x 이미 None임.
                         return jsonify({
-                            "message": "공백이 반환되어 대화가 종료됩니다. 해당 시간의 대화에 응답하지 않았습니다."
-                        }), 300
+                            "message": "Accept the blank request and end the conversation."
+                        }), 204
                     else:
                         updateResponseTimeInQuestion(datetime.now())
 
@@ -384,8 +442,8 @@ def seniorChat(loginId):
                     대화 종료한 상태를 저장하기
                     '''
                     return jsonify({
-                        "message": "공백이 반환되어 대화가 종료됩니다."
-                    }), 300
+                        "message": "Accept the blank request and end the conversation."
+                    }), 204
 
                 # 사용자가 입력을 했다면 대화 히스토리에 추가
                 myChatBot.add_user_message(userInput)
@@ -411,44 +469,43 @@ def seniorChat(loginId):
         }), 405
 
 
-@main.route('/senior/<loginId>/recommend', methods=['POST', 'GET']) #아직 안함-> 먼저 db에 30개정도 데이터 넣어 놓고 하드코딩 해야 함. api는 보류
+@main.route('/senior/<loginId>/recommend', methods=['POST', 'GET']) # 구현중
 def seniorRecommend(loginId):
     try:
         if request.method == 'GET':
             '''
-            기본 : 전체
-            가장 최근의 공공데이터들을 DB에서 30개를 추출해서 최대 30개를 LIST로 보내줌
-            (list에는 postId는 꼭 넣어줘야 함.)***
-            
-            ->일단을 하드코딩으로 백쪽에서 DB에 30개의 데이터를 넣어놓고 주는 방식으로 하는데
-                ->공공데이터 API를 쓰려면 위치 기반의 데이터를 나누는 방식이랑
-                취향 기반의 데이터를 나누는 방식(EX. GPT에 프롬프트 넣어서 구분해서 넣는다던지)을 나누어서
-                DB에 저장한 후, 하는 걸 하루 단위로 하는 방식으로 코딩하기
+                #__init__에서 공공데이터를 받아옴 -> PreferredCategory, MatchProgram을 이미 구별해놓은 상태
+                #그래서 전체 : "RegionalProgram"에서 date가 오늘로부터 가장 빠른 것부터 최대 30개를 보내줌.
+                # 위치 : "MatchProgram"에서 date가 오늘로부터 가장 빠른 것부터 최대 30개를 보내줌.
+                # 취향 : "PreferredCategory"에서 date가 오늘로부터 가장 빠른 것부터 최대 30개를 보내줌.
             '''
+            # loginId가 실제 user인지 확인
+            if (isLoginIdInDB(loginId) == False):
+                return jsonify({
+                    "error": "" + loginId + "does not exists."
+                }), 400
+
+            # 전체, 위치, 취향
+            category = request.args.get('category', 'total')
+
+            if category == 'total' or category == 'location' or category == 'preference':
+                pageList = get30totalPrograms(category)
+            else:
+                return jsonify({"error": "Invalid request format"}), 400
 
             return jsonify({
-                "message": "성공적으로 ""GET"" 받았습니다."
+                "pageList": pageList,
+                "message": "Returned the data list for that category successfully and " + loginId + "exists."
             }), 200
 
         elif request.method == 'POST':
-            '''
-               1. 전체, 위치, 취향 - category를 request로 받아옴
-                category마다 해당되는 공공데이터들을 DB에서 30개를 추출해서
-                프론트에서 category마다 요청이 들어오면
-                해당되는 것들의 데이터를 보내 줌.(list에는 postId는 꼭 넣어줘야 함.)***
-                
+            ''' 
                2. post를 request로 받아옴
                 postId를 request로 얻어오면 이를 redirection하도록 값을 넘겨줌
-                
-                postId = ...(db에서 가져옴.)
-                return redirect(url_for(seniorRecommendPost, data=json.dumps(postId)))
-                
-                이런식으로 넘겨주기
             '''
-
-            return jsonify({
-                "message": "성공적으로 ""POST"" 받았습니다."
-            }), 200
+            postId = request.json.get('postId')
+            
+            return redirect(url_for('main.seniorRecommendPost', loginId=loginId, postId=postId))
         else:
             return jsonify({
                 "message": "Method not allowed."
@@ -458,21 +515,29 @@ def seniorRecommend(loginId):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-#post마다 id를 부여하고(db에 각 프로그램마다 넣을때 이미 id를 부여했음.) 이를 받아옴
-#/senior/<loginId>/recommend에서 리디렉션할 때 postId도 같이 넘겨줌
-@main.route('/senior/<loginId>/recommend/<int:postId>', methods=['GET'])
-def seniorRecommendPost(loginId):
+
+@main.route('/senior/<loginId>/recommend/<int:postId>', methods=['GET'])    #ok-사진만 받아오기 확인되면 다른건 다 ok
+def seniorRecommendPost(loginId, postId):
     try:
         if request.method == 'GET':
+            # loginId가 실제 user인지 확인
+            if (isLoginIdInDB(loginId) == False):
+                return jsonify({
+                    "error": "" + loginId + "does not exists."
+                }), 400
             '''
             postid 받아오고, 유효성 검사하고, 이 post의 모든 것들을 json 데이터로 보내주기
-            ***페이지 구성에 필요한 것들을 프론트에게 물어보기***
-            ***리스트로 보내줄까 하나하나 보내줄까 그것도 물어보기***
             '''
-
-            return jsonify({
-                "message": "sent post data successfully."
-            }), 200
+            postInfo = getPostInfo(postId)
+            if (postInfo == None):
+                return jsonify({
+                    "error": "Failed to send post data."
+                }), 400
+            else:
+                return jsonify({
+                    "postInfo": postInfo,
+                    "message": "sent post data successfully."
+                }), 200
         else:
             return jsonify({
                 "message": "Method not allowed."
@@ -486,9 +551,9 @@ def seniorRecommendPost(loginId):
 페이지에 실시간으로 알림이 떠오르는 걸로 나중에 여건이 되면 하는걸로
 근데 일단 하루치 보호자마다 담당하고있는 senior들의 응답률을 보내줌.
 
-->아니 근데 비동기로 하면 금방 될거같은데? 알림은 예원이 쪽에서 보내는거고.
+->아니 근데 비동기로 하면 금방 될거같은데? 알림은 예원이 쪽에서 보내는거고. ->일단은 나중에 하기로 함.
 '''
-@main.route('/supervisor/<loginId>/notice', methods=['GET']) #ok
+@main.route('/supervisor/<loginId>/notice', methods=['GET']) #ok-OK
 def supervisorNotice(loginId):
     try:
         if request.method == 'GET':
@@ -499,7 +564,8 @@ def supervisorNotice(loginId):
                 }), 400
             
             # 보호자당 senior들의 알림을 23시 전까지 유지
-            date, seniorList = getResponseTimesAndNamesBySeniors(loginId)
+            date, seniorList = getResponseRatioAndNamesBySeniors(loginId)
+
 
             return jsonify({
                 "date": date,
@@ -516,21 +582,21 @@ def supervisorNotice(loginId):
         return jsonify({"error": str(e)}), 500
 
 # 날짜 보내주는 거 추가하기
-@main.route('/supervisor/<loginId>/stats', methods=['POST', 'GET']) #ok
+@main.route('/supervisor/<loginId>/stats', methods=['GET']) #ok-OK
 def supervisorStats(loginId):
     try:
         if request.method == 'GET':
             if (isLoginIdInDB(loginId) == True):
-                nameList = getNameListByLoginId(loginId)
-                nameList2 = []
-                for i in nameList: nameList2.append(i[0])
+                nameList = getNameListByLoginId(loginId)    #(이름,loginId)
+                nameList2 = []  #(이름)
+                for i in nameList:  nameList2.append(i[0])
 
-                responseTimeList = getResponseTimeListByLoginId(nameList)
+                responseRatioList = getResponseRatioListByLoginId(nameList)
 
                 return jsonify({
-                    "names": nameList2,
-                    "responseTimes": responseTimeList,
-                    "message": "" + loginId + "exists and names, responseTime is sent successfully."
+                    "nameList": nameList2,
+                    "responseRatioList": responseRatioList,
+                    "message": "" + loginId + "exists and names, responseRatio is sent successfully."
                 }), 200
             else:
                 return jsonify({

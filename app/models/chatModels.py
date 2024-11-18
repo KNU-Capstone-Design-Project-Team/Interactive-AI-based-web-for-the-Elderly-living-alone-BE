@@ -10,7 +10,7 @@ load_dotenv()
 client = MongoClient(os.getenv("MONGO_URI"))
 
 def getDate():
-    today = datetime.now().strftime('%Y.%m.%d')
+    today = datetime.now().strftime('%Y%m%d')
 
     return today
 
@@ -67,7 +67,7 @@ def createQuestion(conversationId):
 # ((+추가구현요망)만약 responseTime이 오차범위 내로 start time과 같다면)
 def updateResponseTimeInQuestion(responseTime):
     now = datetime.now()
-    today = now.strftime('%Y.%m.%d')
+    today = now.strftime('%Y%m%d')
     db = client.ElderCareNet
 
     conv = db.Conversation.find_one({"date": today})
@@ -90,7 +90,9 @@ def calculateResponseRatio():
     # 해당 Conversation의 질문들을 모두 가져옴
     questions = db.Question.find({"_id": conversationId})
 
-    totalQuestions = questions.count()
+    totalQuestions = 0
+    for x in questions:
+        totalQuestions += 1
     respondedQuestions = db.Question.count_documents({
         "_id": conversationId,
         "responseTime": {"$ne": None}
