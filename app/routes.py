@@ -72,9 +72,9 @@ def joinSenior(joinId):
                         "currentPage": joinId
                     }), 200
                 else:
-                    return jsonify({"message": "parameter is not a valid value."}), 400
+                    return jsonify({"message": "Parameter is not a valid value."}), 400
             else:
-                return jsonify({"message": "parameter is not an integer."}), 400
+                return jsonify({"message": "Parameter is not an integer."}), 400
 
         elif request.method == 'POST':
             if joinId == 1:
@@ -115,31 +115,22 @@ def joinSenior(joinId):
                     return jsonify({"error": "Failed to save residence information."}), 500
 
             elif joinId == 4:
-                selectedActivities = request.json.get('activities', [])  # 사용자가 선택한 활동 리스트
-                includesOther = request.json.get('includesOther', False)  # '그 외' 버튼 여부
+                activities = request.json.get('activities', [])  # 사용자가 선택한 활동 리스트
+                
+                # 사용자가 버튼에서 선택한 활동들 저장
+                if activities:
+                    for activity in activities:
+                        if activity not in ['요리', '운동', '바둑', '노래', '춤', '서예', '스마트폰', '식물재배']:
+                            return jsonify({"error": f"Invalid activity: {activity}"}), 400
 
-                # 1. 활동만 선택한 경우
-                if not includesOther and selectedActivities:
-                    for activity in selectedActivities:
                         result = service.save_senior_activity(loginId, activity)
                         if result != "success":
                             return jsonify({"error": f"Failed to save activity: {activity}"}), 500
-                    return jsonify({"message": "Selected activities saved successfully."}), 200
 
-                # 2. '그 외' 버튼만 선택한 경우
-                elif includesOther and not selectedActivities:
-                    return redirect(url_for('main.joinSeniorOther', joinId=4.1))
+                    # 모든 활동 저장 후 5페이지로 이동
+                    return redirect(url_for('main.joinSenior', joinId=5))
 
-                # 3. 활동 선택 + '그 외' 버튼을 함께 선택한 경우
-                elif includesOther and selectedActivities:
-                    for activity in selectedActivities:
-                        result = service.save_senior_activity(loginId, activity)
-                        if result != "success":
-                            return jsonify({"error": f"Failed to save activity: {activity}"}), 500
-                    return redirect(url_for('main.joinSeniorOther', joinId=4.1))
-
-                else:
-                    return jsonify({"message": "Invalid request. No activities or '그 외' selected."}), 400
+                return jsonify({"message": "No activities selected."}), 400
 
             elif joinId == 5:
                 connectionNum = request.json.get('connectionNum')
@@ -159,34 +150,6 @@ def joinSenior(joinId):
 
         else:
             return jsonify({"message": "Method not allowed."}), 405
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@main.route('/join/senior/<float:joinId>', methods=['POST', 'GET'])
-def joinSeniorOther(joinId):
-    try:
-        if joinId == 4.1:
-            if request.method == 'GET':
-                return jsonify({
-                    "message": "GET request for '그 외' page successfully."
-                }), 200
-
-            elif request.method == 'POST':
-                otherActivity = request.json.get('otherActivity')
-                if not otherActivity:
-                    return jsonify({"message": "No activity provided."}), 400
-
-                # DB에 '그 외' 활동 정보 저장
-                result = service.save_senior_other_activity(loginId, otherActivity)
-                if result == "success":
-                    return redirect(url_for('main.joinSenior', joinId=5))
-                else:
-                    return jsonify({"error": "Failed to save other activity."}), 500
-
-        else:
-            return jsonify({"message": "Invalid page number."}), 400
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
