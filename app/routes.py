@@ -27,7 +27,7 @@ response_sent = False
 
 @main.route('/test', methods=['GET', 'POST'])
 def test():
-    return jsonify({"message":1}), 200
+    return jsonify({"message":"1"}), 200
 
 
 @main.route('/', methods=['POST'])  #jwt 토큰 관련 추가
