@@ -1,17 +1,22 @@
-from openai import OpenAI
+import openai
 import os
 from app.models.chatModels import storeContext
 import datetime
 
 # context를 요약해달라 요청하는 함수
 def requestContextStr(userInput):
-    OpenAI.api_key = os.getenv("OPENAI_API_KEY")
+    openai.api_key = os.getenv("OPENAI_API_KEY")
     contextStr = ""
     
     # gpt한테 요청해서 context 받고(조건: userInput에 한줄만 적어달라고 해야 함.),
     # contextStr에 저장하기
     
     storeContext(contextStr)
+
+
+
+
+
 '''
 latestTaskStatus = {
     "status": "incomplete",

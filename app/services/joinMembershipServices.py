@@ -106,6 +106,25 @@ class MembershipService:
         if not supervisor_member:
             return "Supervisor member not found"
         return supervisor_member
+    def save_senior_other_activity(self, loginId, otherActivity):
+        try:
+            query = "INSERT INTO senior_other_activities (loginId, activity) VALUES (%s, %s)"
+            db.execute(query, (loginId, otherActivity))
+            return "success"
+        except Exception as e:
+            print(f"Error saving other activity: {e}")
+            return "failure"
+
+    def link_guardian(self, loginId, connectionNum):
+        try:
+            # 보호자 연결 로직 (예: 보호자 코드 매칭 확인 및 연결)
+            query = "UPDATE senior_users SET guardianId = (SELECT id FROM guardians WHERE connectionNum = %s) WHERE loginId = %s"
+            db.execute(query, (connectionNum, loginId))
+            return "success"
+        except Exception as e:
+            print(f"Error linking guardian: {e}")
+            return "failure"
+
 
 """
 # Senior 회원 정보 저장
