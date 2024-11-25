@@ -10,6 +10,113 @@ client = MongoClient(os.getenv("MONGO_URI"))
 db = client.ElderCareNet # 사용할 데이터베이스
 guardians = db.guardians  # 보호자 정보를 저장할 컬렉션
 
+senior_collection = db["senior_users"]
+supervisor_collection = db["supervisor_users"]
+
+# Senior 회원 정보 저장
+class SeniorMember:
+    def __init__(self, username, loginId, password, phoneNumber):
+        self.username = username
+        self.loginId = loginId
+        self.password = password
+        self.phoneNumber = phoneNumber
+        self.birthdate = None
+        self.address = None
+        self.guardian_connection = None
+        self.join_date = datetime.now()
+
+    def save_basic_info(self):
+        """1단계 회원 기본 정보 저장"""
+        senior_data = {
+            "username": self.username,
+            "loginId": self.loginId,
+            "password": self.password,
+            "phoneNumber": self.phoneNumber,
+            "join_date": self.join_date,
+        }
+        senior_collection.insert_one(senior_data)
+        return "Basic info saved successfully"
+
+    def update_birthdate(self, year, month, day):
+        """2단계 회원 생년월일 저장"""
+        self.birthdate = datetime(year, month, day)
+        senior_collection.update_one(
+            {"loginId": self.loginId},
+            {"$set": {"birthdate": self.birthdate}}
+        )
+        return "Birthdate updated successfully"
+
+    def update_address(self, si, gu, dong):
+        """3단계 회원 주소 정보 저장"""
+        self.address = {"si": si, "gu": gu, "dong": dong}
+        senior_collection.update_one(
+            {"loginId": self.loginId},
+            {"$set": {"address": self.address}}
+        )
+        return "Address updated successfully"
+
+    def connect_guardian(self, connectionNum):
+        """5단계 보호자와 연결"""
+        guardian = supervisor_collection.find_one({"connectionNum": connectionNum})
+        if guardian:
+            self.guardian_connection = connectionNum
+            senior_collection.update_one(
+                {"loginId": self.loginId},
+                {"$set": {"guardian_connection": connectionNum}}
+            )
+            return "Guardian connected successfully"
+        else:
+            return "Guardian not found with the provided connection number"
+
+    @staticmethod
+    def get_by_loginId(loginId):
+        """특정 회원 정보를 loginId로 조회"""
+        return senior_collection.find_one({"loginId": loginId})
+
+
+# Supervisor 회원 정보 저장
+class SupervisorMember:
+    def __init__(self, username, loginId, password, phoneNumber):
+        self.username = username
+        self.loginId = loginId
+        self.password = password
+        self.phoneNumber = phoneNumber
+        self.connectionNum = None
+        self.join_date = datetime.now()
+
+    def save_basic_info(self):
+        """1단계 보호자 기본 정보 저장"""
+        supervisor_data = {
+            "username": self.username,
+            "loginId": self.loginId,
+            "password": self.password,
+            "phoneNumber": self.phoneNumber,
+            "join_date": self.join_date,
+        }
+        supervisor_collection.insert_one(supervisor_data)
+        return "Basic info saved successfully"
+
+    def generate_connection_number(self):
+        """2단계 보호자 연결 번호 생성 및 저장"""
+        import random
+        self.connectionNum = random.randint(100000, 999999)
+        supervisor_collection.update_one(
+            {"loginId": self.loginId},
+            {"$set": {"connectionNum": self.connectionNum}}
+        )
+        return f"Connection number generated: {self.connectionNum}"
+
+    @staticmethod
+    def get_by_loginId(loginId):
+        """특정 보호자 정보를 loginId로 조회"""
+        return supervisor_collection.find_one({"loginId": loginId})
+
+    @staticmethod
+    def get_connection_num(connectionNum):
+        """보호자 연결 번호로 정보 조회"""
+        return supervisor_collection.find_one({"connectionNum": connectionNum})
+
+"""
 #6자리 보호자의 고유 코드를 생성하고 DB에 저장하는 함수!
 def produceConnectionNum():
 
@@ -59,3 +166,4 @@ def add_guardian_member(username, login_id, password, phone_number):
 
     db.guardians.insert_one(guardian_data)
     return guardian_data  # 저장된 데이터를 반환
+"""
