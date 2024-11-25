@@ -313,7 +313,7 @@ shutdown_flag = False  # 서버 종료 시 비동기 작업 중단을 위한 플
 # 스케줄링 작업 (특정 시간에 메시지를 전송함)
 def scheduledTask():    #ok
     # create question
-    today = datetime.now().strftime('%Y.%m.%d')
+    today = datetime.now().strftime('%Y%m%d')
     temp = db.Conversation.find_one({"date": today})
     createQuestion(temp.get("_id"))
 
@@ -450,9 +450,15 @@ def seniorChat(loginId):
                 # 사용자가 입력을 했다면 대화 히스토리에 추가
                 myChatBot.add_user_message(userInput)
                 myChatBot.exchange_count += 1
+                print(f"count:")
+                print(myChatBot.exchange_count)
+                print("\n")
 
                 # AI 응답
                 message = setAIContent(myChatBot)
+                print(f"count(ai):")
+                print(myChatBot.exchange_count)
+                print("\n")
                 if (myChatBot.exchange_count == 9):
                     myChatBot.exchange_count = 0  # 대화 횟수를 추적
                     myChatBot.ai_count = 0  # ai 대화 횟수
@@ -488,13 +494,16 @@ def seniorRecommend(loginId):
                 }), 400
 
             # 전체, 위치, 취향
-            category = request.args.get('category', 'total')
-
+            print("0")
+            category = request.args.get('category[category]', 'total')
+            print("1")
             if category == 'total' or category == 'location' or category == 'preference':
+                print(category)
                 pageList = get30totalPrograms(category)
             else:
                 return jsonify({"error": "Invalid request format"}), 400
-
+            print(pageList[0])
+            print("END")
             return jsonify({
                 "pageList": pageList,
                 "message": "Returned the data list for that category successfully and " + loginId + "exists."

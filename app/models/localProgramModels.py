@@ -7,52 +7,85 @@ db = client.ElderCareNet
 
 
 def get30totalPrograms(category):
-    # 1. postId랑 2. 이름이랑 3. 사진만 보내주면 됨
     programList = []
-
+    print("4")
     if category == 'total':
         # 전체 30개
-        programList.append(db.ReginalProgram.find_one(sort=[{"date", -1}]))
-        for i in range(1, 30):
-            temp = db.ReginalProgram.find_one(sort=[{"date", -1}], skip=i)
-            if temp:
-                programList.append(temp)
+        print("5-2")
+        for i in range(0, 30):
+            if i == 0:
+                temp = db.ReginalProgram.find_one(sort=[{"date", -1}])
             else:
-                for j in range(i, 30):
-                    programList.append(None)
-                    return programList
+                temp = db.ReginalProgram.find_one(sort=[{"date", -1}], skip=i)
+
+            if temp:
+                print("count: %d" %i)
+                programList.append({
+                    'postId': temp.get('postId'),
+                    'title': temp.get('title'),
+                    'date': temp.get('date'),
+                    'location': temp.get('location'),
+                    'content': temp.get('content'),
+                    'reception': temp.get('reception'),
+                    'ask': temp.get('ask'),
+                    'poster': temp.get('poster')
+                })
+            else:
+                return programList
         return programList
 
     if category == 'location':
         # 전체에서 지역을 search해서 가장 최근것들을 30개 받아옴
         # 단 지금은 hardcoding 되어 있으므로 임의의 지역을 search해서 최대 30개를 가져옴
-        programList.append(db.ReginalProgram.find_one(sort=[{"date", -1}]))
-        for i in range(1, 30):
-            temp = db.ReginalProgram.find_one(sort=[{"date", -1}], skip=i)
-            if temp:
-                programList.append(temp)
+        print("5-2")
+        for i in range(0, 30):
+            if i == 0:
+                # MatchedLocationProgram
+                temp = db.ReginalProgram.find_one(sort=[{"date", -1}])
             else:
-                for j in range(i, 30):
-                    programList.append(None)
-                    return programList
+                temp = db.ReginalProgram.find_one(sort=[{"date", -1}], skip=i)
+
+            if temp:
+                programList.append({
+                    'postId': temp.get('postId'),
+                    'title': temp.get('title'),
+                    'date': temp.get('date'),
+                    'location': temp.get('location'),
+                    'content': temp.get('content'),
+                    'reception': temp.get('reception'),
+                    'ask': temp.get('ask'),
+                    'poster': temp.get('poster')
+                })
+            else:
+                return programList
         return programList
 
     if category == 'preference':
         # 전체에서 취향(여러 개)을 search해서 가장 최근 것들으 최대 30개 받아옴
         # 단 지름은 hardcoding 되어 있으므로 01028435533의 취향을
-        programList.append(db.ReginalProgram.find_one(sort=[{"date", -1}]))
-        for i in range(1, 30):
-            temp = db.ReginalProgram.find_one(sort=[{"date", -1}], skip=i)
-            if temp:
-                programList.append(temp)
+
+        for i in range(0, 30):
+            if i == 0:
+                #MatchedPreferenceProgram
+                temp = db.ReginalProgram.find_one(sort=[{"date", -1}])
             else:
-                for j in range(i, 30):
-                    programList.append(None)
-                    return programList
+                temp = db.ReginalProgram.find_one(sort=[{"date", -1}], skip=i)
+
+            if temp:
+                programList.append({
+                    'postId': temp.get('postId'),
+                    'title': temp.get('title'),
+                    'date': temp.get('date'),
+                    'location': temp.get('location'),
+                    'content': temp.get('content'),
+                    'reception': temp.get('reception'),
+                    'ask': temp.get('ask'),
+                    'poster': temp.get('poster')
+                })
+            else:
+                return programList
         return programList
-
-
-    return programList
+    return None
 
 
 def getPostInfo(postId):    #ok(단 현재는 하드코딩 상태임)

@@ -44,7 +44,7 @@ def create_app():
             8시부터 22시 사이에 2시간 간격으로 새로운 채팅을 생성하는 작업을 등록
         """
         # 매일 8시, 10시, 12시, 14시, 16시, 18시, 20시, 22시에 실행
-        hours = [8, 10, 12, 14, 16, 18, 20, 22]
+        hours = [8, 10, 12, 14, 16, 18, 20, 21, 22]
 
         for hour in hours:
             scheduler.add_job(
@@ -70,7 +70,7 @@ def create_app():
 
     def createConversatationTemp():
         # 현 날짜의 Conversation 생성하고 첫 질문 생성
-        OI = ObjectId("66fff220216270d1981d8795")
+        OI = ObjectId("672fa9e2c4f7ae5107be9b2e")
         createConversation(OI)
 
     ''' 
