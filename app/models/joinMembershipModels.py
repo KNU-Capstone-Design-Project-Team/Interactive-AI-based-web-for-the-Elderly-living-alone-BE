@@ -10,8 +10,9 @@ client = MongoClient(os.getenv("MONGO_URI"))
 db = client.ElderCareNet # 사용할 데이터베이스
 guardians = db.guardians  # 보호자 정보를 저장할 컬렉션
 
-senior_collection = db["senior_users"]
-supervisor_collection = db["supervisor_users"]
+senior_collection = db["SeniorUser"]
+supervisor_collection = db["SupervisorUser"]
+supervisor_code=db["SupervisorCode"]
 
 # Senior 회원 정보 저장
 class SeniorMember:
@@ -100,7 +101,7 @@ class SupervisorMember:
         """2단계 보호자 연결 번호 생성 및 저장"""
         import random
         self.connectionNum = random.randint(100000, 999999)
-        supervisor_collection.update_one(
+        supervisor_code.update_one(
             {"loginId": self.loginId},
             {"$set": {"connectionNum": self.connectionNum}}
         )

@@ -13,8 +13,9 @@ client = MongoClient(os.getenv("MONGO_URI"))
 db = client.ElderCareNet # 사용할 데이터베이스
 guardians = db.guardians  # 보호자 정보를 저장할 컬렉션
 
-senior_collection = db["senior_users"]
-supervisor_collection = db["supervisor_users"]
+senior_collection = db["SeniorUser"]
+supervisor_collection = db["SupervisorUser"]
+supervisor_code=db["SupervisorCode"]
 
 class MembershipService:
     def __init__(self):
