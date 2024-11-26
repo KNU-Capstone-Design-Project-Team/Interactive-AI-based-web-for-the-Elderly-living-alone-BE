@@ -40,39 +40,12 @@ def login():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@main.route('/join', methods=['POST']) #ok-ok
-def join():
+
+@main.route('/join', methods=['POST'])
+def joinSenior():
     try:
         if request.method == 'POST':
-            category = request.json.get('category')
-            if category == 'supervisor':
-                return redirect(url_for('main.joinSupervisor', joinId=1))
-            elif category == 'senior':
-                return redirect(url_for('main.joinSenior', joinId=1))
-            else :
-                return error_response("Invalid request value.")
 
-    # 서버 내부 오류 발생 시 500 에러 반환
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@main.route('/join/senior/<int:joinId>', methods=['POST', 'GET'])
-def joinSenior(joinId):
-    try:
-        if request.method == 'GET':
-            if isinstance(joinId, int):
-                if 1 <= joinId <= 5:
-                    return jsonify({
-                        "message": "GET request successfully.",
-                        "currentPage": joinId
-                    }), 200
-                else:
-                    return jsonify({"message": "Parameter is not a valid value."}), 400
-            else:
-                return jsonify({"message": "Parameter is not an integer."}), 400
-
-        elif request.method == 'POST':
-            if joinId == 1:
                 username = request.json.get('username')
                 loginId = request.json.get('loginId')
                 password = request.json.get('password')
@@ -85,7 +58,7 @@ def joinSenior(joinId):
                 else:
                     return jsonify({"error": "Failed to save user information."}), 500
 
-            elif joinId == 2:
+
                 year = request.json.get('year')
                 month = request.json.get('month')
                 day = request.json.get('day')
@@ -97,45 +70,41 @@ def joinSenior(joinId):
                 else:
                     return jsonify({"error": "Failed to save birthday information."}), 500
 
-            elif joinId == 3:
-                si = request.json.get('si')
-                gu = request.json.get('gu')
-                dong = request.json.get('dong')
+                if usertype == "senior":
+                    si = request.json.get('si')
+                    gu = request.json.get('gu')
+                    dong = request.json.get('dong')
 
-                # DB에 거주 정보 저장
-                result = service.save_senior_residence(loginId, si, gu, dong)
-                if result == "success":
-                    return jsonify({"message": "Residence information saved successfully."}), 200
-                else:
-                    return jsonify({"error": "Failed to save residence information."}), 500
+                    # DB에 거주 정보 저장
+                    result = service.save_senior_residence(loginId, si, gu, dong)
+                    if result == "success":
+                        return jsonify({"message": "Residence information saved successfully."}), 200
+                    else:
+                        return jsonify({"error": "Failed to save residence information."}), 500
 
-            elif joinId == 4:
-                activities = request.json.get('activities', [])  # 사용자가 선택한 활동 리스트
-                
-                # 사용자가 버튼에서 선택한 활동들 저장
-                if activities:
-                    for activity in activities:
-                        if activity not in ['요리', '운동', '바둑', '노래', '춤', '서예', '스마트폰', '식물재배']:
-                            return jsonify({"error": f"Invalid activity: {activity}"}), 400
 
-                        result = service.save_senior_activity(loginId, activity)
-                        if result != "success":
-                            return jsonify({"error": f"Failed to save activity: {activity}"}), 500
+                    activities = request.json.get('activities', [])  # 사용자가 선택한 활동 리스트
 
-                    # 모든 활동 저장 후 5페이지로 이동
-                    return redirect(url_for('main.joinSenior', joinId=5))
+                    # 사용자가 버튼에서 선택한 활동들 저장
+                    if activities:
+                        for activity in activities:
+                            if activity not in ['요리', '운동', '바둑', '노래', '춤', '서예', '스마트폰', '식물재배']:
+                                return jsonify({"error": f"Invalid activity: {activity}"}), 400
 
-                return jsonify({"message": "No activities selected."}), 400
+                            result = service.save_senior_activity(loginId, activity)
+                            if result != "success":
+                                return jsonify({"error": f"Failed to save activity: {activity}"}), 500
 
-            elif joinId == 5:
-                connectionNum = request.json.get('connectionNum')
 
-                # 보호자 연결 번호로 DB 내 보호자와 연결
-                result = service.link_guardian(loginId, connectionNum)
-                if result == "success":
-                    return redirect(url_for('main.welcome', loginId=loginId))
-                else:
-                    return jsonify({"error": "Failed to link guardian."}), 500
+
+                    connectionNum = request.json.get('connectionNum')
+
+                    # 보호자 연결 번호로 DB 내 보호자와 연결
+                    result = service.link_guardian(loginId, connectionNum)
+                    if result == "success":
+                        return redirect(url_for('main.welcome', loginId=loginId))
+                    else:
+                        return jsonify({"error": "Failed to link guardian."}), 500
 
             # '다음으로' 버튼 눌렀을 시
             toTheNext = request.json.get('toTheNext')
@@ -294,7 +263,6 @@ def supervisorHome(loginId):
     # 서버 내부 오류 발생 시 500 에러 반환
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 
 '''
