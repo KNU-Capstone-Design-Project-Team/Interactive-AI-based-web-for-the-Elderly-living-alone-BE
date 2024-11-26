@@ -9,6 +9,7 @@ from app.services.chatServices import *
 from chatbot import Chatbot
 from chatbot1 import Chatbot1
 from datetime import datetime
+from app.services.loginInfoServices import *
 import asyncio
 import signal
 
@@ -34,14 +35,19 @@ def test():
     return jsonify({"message":"1"}), 200
 
 
-@main.route('/', methods=['POST'])  #jwt 토큰 관련 추가
+@main.route('/login', methods=['POST'])
 def login():
     try:
-        '''
-        +) JWT 토근 관련 code
-        '''
-        pass
-    # 서버 내부 오류 발생 시 500 에러 반환
+        loginId = request.json.get("loginId")
+        password = request.json.get("password")
+
+        if not loginId or not password:
+            return jsonify({"error": "loginId and password are required"}), 400
+
+        service = LoginInfoService()
+        response, status_code = service.authenticate_user(loginId, password)
+
+        return jsonify(response), status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -50,38 +56,39 @@ def login():
 def joinSenior():
     try: 
         if request.method == 'POST':
+                 if request.json.get('usertype') == "senior":
           
-                username = request.json.get('username')
-                loginId = request.json.get('loginId')
-                password = request.json.get('password')
-                phoneNumber = request.json.get('phoneNumber')
+                    username = request.json.get('username')
+                    loginId = request.json.get('loginId')
+                    password = request.json.get('password')
+                    phoneNumber = request.json.get('phoneNumber')
 
-                # DB에 senior 유저 정보 저장
-                result = service.save_senior_user(username, loginId, password, phoneNumber)
-                if result == "success":
-                    return jsonify({"message": "User information saved successfully."}), 200
-                else:
-                    return jsonify({"error": "Failed to save user information."}), 500
+                    # DB에 senior 유저 정보 저장
+                    result = service.register_senior_basic_info(username, loginId, password, phoneNumber)
+                    if result == "success":
+                        return jsonify({"message": "User information saved successfully."}), 200
+                    else:
+                        return jsonify({"error": "Failed to save user information."}), 500
 
-            
-                year = request.json.get('year')
-                month = request.json.get('month')
-                day = request.json.get('day')
+                
+                    year = request.json.get('year')
+                    month = request.json.get('month')
+                    day = request.json.get('day')
 
-                # DB에 생일 정보 저장
-                result = service.save_senior_birthday(loginId, year, month, day)
-                if result == "success":
-                    return jsonify({"message": "Birthday information saved successfully."}), 200
-                else:
-                    return jsonify({"error": "Failed to save birthday information."}), 500
+                    # DB에 생일 정보 저장
+                    result = service.update_senior_birthdate(loginId, year, month, day)
+                    if result == "success":
+                        return jsonify({"message": "Birthday information saved successfully."}), 200
+                    else:
+                        return jsonify({"error": "Failed to save birthday information."}), 500
 
-                if usertype == "senior":
+               
                     si = request.json.get('si')
                     gu = request.json.get('gu')
                     dong = request.json.get('dong')
 
                     # DB에 거주 정보 저장
-                    result = service.save_senior_residence(loginId, si, gu, dong)
+                    result = service.update_senior_address(loginId, si, gu, dong)
                     if result == "success":
                         return jsonify({"message": "Residence information saved successfully."}), 200
                     else:
@@ -105,7 +112,7 @@ def joinSenior():
                     connectionNum = request.json.get('connectionNum')
 
                     # 보호자 연결 번호로 DB 내 보호자와 연결
-                    result = service.link_guardian(loginId, connectionNum)
+                    result = service.connect_senior_to_guardian(loginId, connectionNum)
                     if result == "success":
                         return redirect(url_for('main.welcome', loginId=loginId))
                     else:
