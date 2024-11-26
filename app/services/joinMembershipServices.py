@@ -20,6 +20,32 @@ class MembershipService:
     def __init__(self):
         pass
     
+   
+    def save_senior_activity(loginId, activity):
+        """
+        MongoDB에 사용자의 활동 정보를 저장합니다.
+
+        Args:
+            loginId (str): 사용자 ID.
+            activity (str): 사용자가 선택한 활동.
+
+        Returns:
+            str: 성공 시 "success", 실패 시 "error".
+        """
+        try:
+            # MongoDB에 저장할 데이터
+            data = {
+                "loginId": loginId,
+                "activity": activity
+            }
+
+            # 데이터 삽입
+            senior_collection.insert_one(data)
+            return "success"
+        except Exception as e:
+            print(f"Error saving activity to MongoDB: {e}")
+            return "error"
+
     # Senior 회원 관련 서비스 메서드
     def register_senior_basic_info(self, username, loginId, password, phoneNumber):
         """Senior 회원의 기본 정보를 저장합니다."""
