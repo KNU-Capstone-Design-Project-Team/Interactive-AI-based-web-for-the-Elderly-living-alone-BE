@@ -29,18 +29,13 @@ response_sent = False
 #에러 처리 공통 함수
 def error_response(message,status_code=400):
     return jsonify({"message":message}),status_code
-@main.route('/test', methods=['GET', 'POST'])
-def test():
-    return jsonify({"message":"1"}), 200
 
 
 @main.route('/', methods=['POST'])  #jwt 토큰 관련 추가
 def login():
     try:
-        '''
-        +) JWT 토근 관련 code
-        '''
         pass
+
     # 서버 내부 오류 발생 시 500 에러 반환
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -209,7 +204,7 @@ def joinSupervisor(joinId):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-@main.route('/welcome/senior/<int:guideId>', methods=['POST, GET']) #아직 안함
+@main.route('/welcome/senior/<int:guideId>', methods=['POST, GET']) #아마 프론트에서 자체적으로 처리할 듯.
 def welcomeSenior(guidId):
     try:
         pass
@@ -217,7 +212,7 @@ def welcomeSenior(guidId):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@main.route('/welcome/supervisor/<int:guideId>', methods=['POST, GET']) #아직 안함
+@main.route('/welcome/supervisor/<int:guideId>', methods=['POST, GET']) #아마 프론트에서 자체적으로 처리할 듯.
 def welcomeSupervisor(guidId):
     try:
         pass

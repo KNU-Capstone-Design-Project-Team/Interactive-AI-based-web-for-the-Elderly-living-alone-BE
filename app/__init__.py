@@ -9,6 +9,9 @@ from apscheduler.jobstores.base import JobLookupError
 from app.models.chatModels import *
 from app.routes import scheduledTask, popAllMessageQueue
 from flask_cors import CORS
+from flask_bcrypt import Bcrypt
+from flask_jwt_extended import JWTManager, create_access_token, create_refresh_token, jwt_required, get_jwt_identity
+
 
 '''
 전체적으로 추가 구현해야할 사항:
@@ -44,7 +47,7 @@ def create_app():
             8시부터 22시 사이에 2시간 간격으로 새로운 채팅을 생성하는 작업을 등록
         """
         # 매일 8시, 10시, 12시, 14시, 16시, 18시, 20시, 22시에 실행
-        hours = [8, 10, 12, 14, 16, 18, 20, 21, 22]
+        hours = [8, 10, 12, 14, 16, 18, 20, 22]
 
         for hour in hours:
             scheduler.add_job(

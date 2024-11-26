@@ -18,4 +18,17 @@ def isLoginIdInDB(loginId):
 
     return False
 
-#
+# 현재 DB 내에 해당 유저 아이디가 존재하는지 판단하고 없으면 None을, 있으면 _id를 넘겨줌.
+def getLoginIdInDB(loginId):
+    # MongoDB에서 현재 앱의 MongoDB 데이터베이스 사용
+    db = client.ElderCareNet
+    user = db.SeniorUser.find_one({"loginId": loginId})
+
+    if user:
+        return user.get("_id")
+    else:
+        user = db.SupervisorUser.find_one({"loginId": loginId})
+        if user:
+            return user.get("_id")
+
+    return None
