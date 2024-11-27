@@ -1,4 +1,6 @@
 from flask import Blueprint, request, jsonify, url_for, redirect
+#import sys
+#print(sys.path)
 from app.models.chatModels import *
 from app.models.joinMembershipModels import *
 from app.services.joinMembershipServices import *
@@ -6,10 +8,22 @@ from app.models.localProgramModels import *
 from app.models.loginInfoModels import *
 from app.models.noticeModels import *
 from app.services.chatServices import *
+
+from app.services.loginInfoServices import *
+
+"""
+from models.chatModels import *
+from models.joinMembershipModels import *
+from services.joinMembershipServices import *
+from models.localProgramModels import *
+from models.loginInfoModels import *
+from models.noticeModels import *
+from services.chatServices import *
+from services.loginInfoServices import *
+"""
 from chatbot import Chatbot
 from chatbot1 import Chatbot1
 from datetime import datetime
-from app.services.loginInfoServices import *
 import asyncio
 import signal
 
@@ -117,6 +131,22 @@ def joinSenior():
                         return redirect(url_for('main.welcome', loginId=loginId))
                     else:
                         return jsonify({"error": "Failed to link guardian."}), 500
+                    
+                 elif request.json.get('usertype') == "supervisor":
+                    username = request.json.get('username')
+                    loginId = request.json.get('loginId')
+                    password = request.json.get('password')
+                    phoneNumber = request.json.get('phoneNumber')
+
+                    # DB에 supervisor 유저 정보 저장
+                    result = service.register_supervisor_basic_info(username, loginId, password, phoneNumber)
+                    if result == "success":
+                        return jsonify({"message": "User information saved successfully."}), 200
+                    else:
+                        return jsonify({"error": "Failed to save user information."}), 500
+
+                
+                     
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
