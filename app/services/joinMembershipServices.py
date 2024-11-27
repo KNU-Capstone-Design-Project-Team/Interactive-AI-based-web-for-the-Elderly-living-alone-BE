@@ -1,4 +1,5 @@
-from app.models.joinMembershipModels import  SeniorMember, SupervisorMember
+#from app.models.joinMembershipModels import  SeniorMember, SupervisorMember
+from models.joinMembershipModels import  SeniorMember, SupervisorMember
 from werkzeug.security import generate_password_hash
 import re
 import os
