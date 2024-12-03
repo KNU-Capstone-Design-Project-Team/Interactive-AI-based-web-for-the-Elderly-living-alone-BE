@@ -84,32 +84,37 @@ def calculateResponseRatio():
     db = client.ElderCareNet
     today = getDate()
 
-    convdb = db.Conversation.find_one({"date": today})
-    conversationId = convdb.get("_id")  # 오늘 자 conversation _id
+    # 오늘 날짜의 모든 Conversation 가져오기
+    conversations = db.Conversation.find({"date": today})
 
-    # 해당 Conversation의 질문들을 모두 가져옴
-    questions = db.Question.find({"_id": conversationId})
+    for conversation in conversations:
+        conversationId = conversation.get("_id")  # 각 Conversation의 _id 가져오기
 
-    totalQuestions = 0
-    for x in questions:
-        totalQuestions += 1
-    respondedQuestions = db.Question.count_documents({
-        "_id": conversationId,
-        "responseTime": {"$ne": None}
-    })
+        # 해당 Conversation의 질문들을 모두 가져옴
+        questions = db.Question.find({"conversationId": conversationId})
 
-    # 응답률 계산
-    if totalQuestions > 0:
-        responseRatio = respondedQuestions / totalQuestions * 100
-    else:
-        responseRatio = 0
+        totalQuestions = 0
+        for _ in questions:  # 질문의 개수를 셈
+            totalQuestions += 1
 
-    # Conversation에 응답률 저장
-    db.Conversation.update_one(
-        {"_id": conversationId},
-        {"$set": {"responseRatio": responseRatio}}
-    )
-    print(f"stored responseRatio.")
+        # 응답한 질문 수 계산
+        respondedQuestions = db.Question.count_documents({
+            "conversationId": conversationId,
+            "responseTime": {"$ne": None}
+        })
+
+        # 응답률 계산
+        if totalQuestions > 0:
+            responseRatio = respondedQuestions / totalQuestions * 100
+        else:
+            responseRatio = 0
+
+        # 각 Conversation에 응답률 저장
+        db.Conversation.update_one(
+            {"_id": conversationId},
+            {"$set": {"responseRatio": responseRatio}}
+        )
+        print(f"Stored responseRatio for conversationId {conversationId}.")
 
 
 # gpt 대화

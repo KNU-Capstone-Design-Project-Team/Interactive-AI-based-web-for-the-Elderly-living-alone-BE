@@ -40,71 +40,70 @@ def login():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
+'''
 @main.route('/join', methods=['POST'])
 def joinSenior():
     try:
         if request.method == 'POST':
 
-                username = request.json.get('username')
-                loginId = request.json.get('loginId')
-                password = request.json.get('password')
-                phoneNumber = request.json.get('phoneNumber')
+            username = request.json.get('username')
+            loginId = request.json.get('loginId')
+            password = request.json.get('password')
+            phoneNumber = request.json.get('phoneNumber')
 
-                # DB에 senior 유저 정보 저장
-                result = service.save_senior_user(username, loginId, password, phoneNumber)
+            # DB에 senior 유저 정보 저장
+            result = service.save_senior_user(username, loginId, password, phoneNumber)
+            if result == "success":
+                return jsonify({"message": "User information saved successfully."}), 200
+            else:
+                return jsonify({"error": "Failed to save user information."}), 500
+
+
+            year = request.json.get('year')
+            month = request.json.get('month')
+            day = request.json.get('day')
+
+            # DB에 생일 정보 저장
+            result = service.save_senior_birthday(loginId, year, month, day)
+            if result == "success":
+                return jsonify({"message": "Birthday information saved successfully."}), 200
+            else:
+                return jsonify({"error": "Failed to save birthday information."}), 500
+
+            if usertype == "senior":
+                si = request.json.get('si')
+                gu = request.json.get('gu')
+                dong = request.json.get('dong')
+
+                # DB에 거주 정보 저장
+                result = service.save_senior_residence(loginId, si, gu, dong)
                 if result == "success":
-                    return jsonify({"message": "User information saved successfully."}), 200
+                    return jsonify({"message": "Residence information saved successfully."}), 200
                 else:
-                    return jsonify({"error": "Failed to save user information."}), 500
+                    return jsonify({"error": "Failed to save residence information."}), 500
 
 
-                year = request.json.get('year')
-                month = request.json.get('month')
-                day = request.json.get('day')
+                activities = request.json.get('activities', [])  # 사용자가 선택한 활동 리스트
 
-                # DB에 생일 정보 저장
-                result = service.save_senior_birthday(loginId, year, month, day)
+                # 사용자가 버튼에서 선택한 활동들 저장
+                if activities:
+                    for activity in activities:
+                        if activity not in ['요리', '운동', '바둑', '노래', '춤', '서예', '스마트폰', '식물재배']:
+                            return jsonify({"error": f"Invalid activity: {activity}"}), 400
+
+                        result = service.save_senior_activity(loginId, activity)
+                        if result != "success":
+                            return jsonify({"error": f"Failed to save activity: {activity}"}), 500
+
+
+                connectionNum = request.json.get('connectionNum')
+
+                # 보호자 연결 번호로 DB 내 보호자와 연결
+                result = service.link_guardian(loginId, connectionNum)
                 if result == "success":
-                    return jsonify({"message": "Birthday information saved successfully."}), 200
+                    return redirect(url_for('main.welcome', loginId=loginId))
                 else:
-                    return jsonify({"error": "Failed to save birthday information."}), 500
-
-                if usertype == "senior":
-                    si = request.json.get('si')
-                    gu = request.json.get('gu')
-                    dong = request.json.get('dong')
-
-                    # DB에 거주 정보 저장
-                    result = service.save_senior_residence(loginId, si, gu, dong)
-                    if result == "success":
-                        return jsonify({"message": "Residence information saved successfully."}), 200
-                    else:
-                        return jsonify({"error": "Failed to save residence information."}), 500
-
-
-                    activities = request.json.get('activities', [])  # 사용자가 선택한 활동 리스트
-
-                    # 사용자가 버튼에서 선택한 활동들 저장
-                    if activities:
-                        for activity in activities:
-                            if activity not in ['요리', '운동', '바둑', '노래', '춤', '서예', '스마트폰', '식물재배']:
-                                return jsonify({"error": f"Invalid activity: {activity}"}), 400
-
-                            result = service.save_senior_activity(loginId, activity)
-                            if result != "success":
-                                return jsonify({"error": f"Failed to save activity: {activity}"}), 500
-
-
-
-                    connectionNum = request.json.get('connectionNum')
-
-                    # 보호자 연결 번호로 DB 내 보호자와 연결
-                    result = service.link_guardian(loginId, connectionNum)
-                    if result == "success":
-                        return redirect(url_for('main.welcome', loginId=loginId))
-                    else:
-                        return jsonify({"error": "Failed to link guardian."}), 500
+                    return jsonify({"error": "Failed to link guardian."}), 500
 
             # '다음으로' 버튼 눌렀을 시
             toTheNext = request.json.get('toTheNext')
@@ -117,7 +116,7 @@ def joinSenior():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
+'''
 @main.route('/join/senior/<int:joinId>/addinfo', methods=['POST', 'GET']) # 아직 안함
 def joinAddInfo(joinId):
     try:
@@ -132,7 +131,7 @@ def joinAddInfo(joinId):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
+'''
 @main.route('/join/supervisor/<int:joinId>', methods=['POST', 'GET']) # 추가 수정중
 def joinSupervisor(joinId):
     try:
@@ -172,7 +171,7 @@ def joinSupervisor(joinId):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+'''
 @main.route('/welcome/senior/<int:guideId>', methods=['POST, GET']) #아마 프론트에서 자체적으로 처리할 듯.
 def welcomeSenior(guidId):
     try:
@@ -354,22 +353,7 @@ def seniorChat(loginId):
     global response_sent
     response_sent = False  # 새로운 요청이 들어올 때마다 플래그를 리셋
 
-    if request.method == 'GET':
-        try:
-            if (isLoginIdInDB(loginId) == False):
-                return jsonify({
-                    "error": "" + loginId + "does not exists."
-                }), 400
-            else:
-                return jsonify({
-                    "message": "" + loginId + "exists."
-                }), 200
-
-        # 서버 내부 오류 발생 시 500 에러 반환
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
-
-    elif request.method == 'POST':
+    if request.method == 'POST':
         '''
             gpt와 행복 어르신이 9번 대화하도록 함.
         '''
@@ -463,8 +447,7 @@ def seniorRecommend(loginId):
                 pageList = get30totalPrograms(category)
             else:
                 return jsonify({"error": "Invalid request format"}), 400
-            print(pageList[0])
-            print("END")
+
             return jsonify({
                 "pageList": pageList,
                 "message": "Returned the data list for that category successfully and " + loginId + "exists."
@@ -538,7 +521,7 @@ def supervisorNotice(loginId):
             # 보호자당 senior들의 알림을 23시 전까지 유지
             date, seniorList = getResponseRatioAndNamesBySeniors(loginId)
 
-
+            print(seniorList)
             return jsonify({
                 "date": date,
                 "seniorNoticeList": seniorList,
@@ -564,7 +547,7 @@ def supervisorStats(loginId):
                 for i in nameList:  nameList2.append(i[0])
 
                 responseRatioList = getResponseRatioListByLoginId(nameList)
-
+                print(responseRatioList)
                 return jsonify({
                     "nameList": nameList2,
                     "responseRatioList": responseRatioList,

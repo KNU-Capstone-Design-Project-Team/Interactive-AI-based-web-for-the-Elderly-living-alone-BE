@@ -6,16 +6,16 @@ client = MongoClient(os.getenv("MONGO_URI"))
 db = client.ElderCareNet
 
 
-# 최근 10개의 conversation의 응답률을 가져와서 list에 담아 반환하는 함수
+# 최근 7개의 conversation의 응답률을 가져와서 list에 담아 반환하는 함수
 def recent10DaysNotice(N, loginId):
     noticeList = []
 
     today = datetime.datetime.now()
     for i in range(N):
         previousDay = today - datetime.timedelta(days=(i))
-        previousDay = previousDay.strftime('%Y-%m-%d')
+        previousDay = previousDay.strftime('%Y%m%d')
         temp2 = db.SeniorUser.find_one({"loginId": loginId})
-        temp = db.Conversation.find_one({"SeniorUser_id": temp2.get('SeniorUser_id')}, {"date":previousDay})
+        temp = db.Conversation.find_one({"SeniorUser_id": temp2.get('_id')}, {"date":previousDay})
 
         if temp == None:
             for j in range(i, N): noticeList.append(None)
