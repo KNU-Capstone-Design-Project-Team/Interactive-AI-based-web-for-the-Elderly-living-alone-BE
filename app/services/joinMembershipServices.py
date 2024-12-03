@@ -1,4 +1,5 @@
 from app.models.joinMembershipModels import  SeniorMember, SupervisorMember
+#from models.joinMembershipModels import  SeniorMember, SupervisorMember
 from werkzeug.security import generate_password_hash
 import re
 import os
@@ -13,13 +14,40 @@ client = MongoClient(os.getenv("MONGO_URI"))
 db = client.ElderCareNet # 사용할 데이터베이스
 guardians = db.guardians  # 보호자 정보를 저장할 컬렉션
 
-senior_collection = db["senior_users"]
-supervisor_collection = db["supervisor_users"]
+senior_collection = db["SeniorUser"]
+supervisor_collection = db["SupervisorUser"]
+supervisor_code=db["SupervisorCode"]
 
 class MembershipService:
     def __init__(self):
         pass
     
+   
+    def save_senior_activity(loginId, activity):
+        """
+        MongoDB에 사용자의 활동 정보를 저장합니다.
+
+        Args:
+            loginId (str): 사용자 ID.
+            activity (str): 사용자가 선택한 활동.
+
+        Returns:
+            str: 성공 시 "success", 실패 시 "error".
+        """
+        try:
+            # MongoDB에 저장할 데이터
+            data = {
+                "loginId": loginId,
+                "activity": activity
+            }
+
+            # 데이터 삽입
+            senior_collection.insert_one(data)
+            return "success"
+        except Exception as e:
+            print(f"Error saving activity to MongoDB: {e}")
+            return "error"
+
     # Senior 회원 관련 서비스 메서드
     def register_senior_basic_info(self, username, loginId, password, phoneNumber):
         """Senior 회원의 기본 정보를 저장합니다."""

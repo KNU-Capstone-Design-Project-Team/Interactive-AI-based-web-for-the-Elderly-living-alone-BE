@@ -1,4 +1,6 @@
 from flask import Blueprint, request, jsonify, url_for, redirect
+#import sys
+#print(sys.path)
 from app.models.chatModels import *
 from app.models.joinMembershipModels import *
 from app.services.joinMembershipServices import *
@@ -6,6 +8,19 @@ from app.models.localProgramModels import *
 from app.models.loginInfoModels import *
 from app.models.noticeModels import *
 from app.services.chatServices import *
+
+from app.services.loginInfoServices import *
+
+"""
+from models.chatModels import *
+from models.joinMembershipModels import *
+from services.joinMembershipServices import *
+from models.localProgramModels import *
+from models.loginInfoModels import *
+from models.noticeModels import *
+from services.chatServices import *
+from services.loginInfoServices import *
+"""
 from chatbot import Chatbot
 from chatbot1 import Chatbot1
 from datetime import datetime
@@ -29,237 +44,110 @@ response_sent = False
 #에러 처리 공통 함수
 def error_response(message,status_code=400):
     return jsonify({"message":message}),status_code
+@main.route('/test', methods=['GET', 'POST'])
+def test():
+    return jsonify({"message":"1"}), 200
 
 
-@main.route('/', methods=['POST'])  #jwt 토큰 관련 추가
+@main.route('/login', methods=['POST'])
 def login():
     try:
-        pass
+        loginId = request.json.get("loginId")
+        password = request.json.get("password")
 
-    # 서버 내부 오류 발생 시 500 에러 반환
+        if not loginId or not password:
+            return jsonify({"error": "loginId and password are required"}), 400
+
+        service = LoginInfoService()
+        response, status_code = service.authenticate_user(loginId, password)
+
+        return jsonify(response), status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-'''
+
 @main.route('/join', methods=['POST'])
 def joinSenior():
-    try:
+    try: 
         if request.method == 'POST':
+                 if request.json.get('usertype') == "senior":
 
-            username = request.json.get('username')
-            loginId = request.json.get('loginId')
-            password = request.json.get('password')
-            phoneNumber = request.json.get('phoneNumber')
+                    username = request.json.get('username')
+                    loginId = request.json.get('loginId')
+                    password = request.json.get('password')
+                    phoneNumber = request.json.get('phoneNumber')
 
-            # DB에 senior 유저 정보 저장
-            result = service.save_senior_user(username, loginId, password, phoneNumber)
-            if result == "success":
-                return jsonify({"message": "User information saved successfully."}), 200
-            else:
-                return jsonify({"error": "Failed to save user information."}), 500
-
-
-            year = request.json.get('year')
-            month = request.json.get('month')
-            day = request.json.get('day')
-
-            # DB에 생일 정보 저장
-            result = service.save_senior_birthday(loginId, year, month, day)
-            if result == "success":
-                return jsonify({"message": "Birthday information saved successfully."}), 200
-            else:
-                return jsonify({"error": "Failed to save birthday information."}), 500
-
-            if usertype == "senior":
-                si = request.json.get('si')
-                gu = request.json.get('gu')
-                dong = request.json.get('dong')
-
-                # DB에 거주 정보 저장
-                result = service.save_senior_residence(loginId, si, gu, dong)
-                if result == "success":
-                    return jsonify({"message": "Residence information saved successfully."}), 200
-                else:
-                    return jsonify({"error": "Failed to save residence information."}), 500
+                    # DB에 senior 유저 정보 저장
+                    result = service.register_senior_basic_info(username, loginId, password, phoneNumber)
+                    if result == "success":
+                        return jsonify({"message": "User information saved successfully."}), 200
+                    else:
+                        return jsonify({"error": "Failed to save user information."}), 500
 
 
-                activities = request.json.get('activities', [])  # 사용자가 선택한 활동 리스트
+                    year = request.json.get('year')
+                    month = request.json.get('month')
+                    day = request.json.get('day')
 
-                # 사용자가 버튼에서 선택한 활동들 저장
-                if activities:
-                    for activity in activities:
-                        if activity not in ['요리', '운동', '바둑', '노래', '춤', '서예', '스마트폰', '식물재배']:
-                            return jsonify({"error": f"Invalid activity: {activity}"}), 400
-
-                        result = service.save_senior_activity(loginId, activity)
-                        if result != "success":
-                            return jsonify({"error": f"Failed to save activity: {activity}"}), 500
-
-
-                connectionNum = request.json.get('connectionNum')
-
-                # 보호자 연결 번호로 DB 내 보호자와 연결
-                result = service.link_guardian(loginId, connectionNum)
-                if result == "success":
-                    return redirect(url_for('main.welcome', loginId=loginId))
-                else:
-                    return jsonify({"error": "Failed to link guardian."}), 500
-
-            # '다음으로' 버튼 눌렀을 시
-            toTheNext = request.json.get('toTheNext')
-            if toTheNext == False:
-                return jsonify({"message": "잘못된 요청입니다."}), 400
-            return redirect(url_for('main.joinSenior', joinId=joinId + 1))
-
-        else:
-            return jsonify({"message": "Method not allowed."}), 405
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-'''
-@main.route('/join/senior/<int:joinId>/addinfo', methods=['POST', 'GET']) # 아직 안함
-def joinAddInfo(joinId):
-    try:
-        if request.method == 'POST':
-            # 추가 정보 저장 로직 구현 (필요시)
-            return jsonify({"message": "Additional info saved successfully"}), 200
-        elif request.method == 'GET':
-            return jsonify({"message": "GET request for add info received"}), 200
-        else:
-            return error_response("Method not allowed.", 405)
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-'''
-@main.route('/join/supervisor/<int:joinId>', methods=['POST', 'GET']) # 추가 수정중
-def joinSupervisor(joinId):
-    try:
-        if request.method == 'GET':
-            if isinstance(joinId, int) and 1 <= joinId <= 2:
-                return jsonify({"message": "GET joinId successfully."}), 200
-            else:
-                return error_response("Parameter is not valid value or not an integer.", 400)
-
-        elif request.method == 'POST':
-            if joinId == 1:
-                username = request.json.get('username')
-                loginId = request.json.get('loginId')
-                password = request.json.get('password')
-                phoneNumber = request.json.get('phoneNumber')
-                result = service.register_supervisor_basic_info(username, loginId, password, phoneNumber)
-                if result == "success":
-                    return jsonify({"message": "Supervisor info saved successfully"}), 200
-                else:
-                    return error_response("Failed to save supervisor info")
-
-            elif joinId == 2:
-                result = service.generate_supervisor_connection_num(loginId)
-                if result == "success":
-                    return redirect(url_for('main.welcome', loginId="2"))
-                else:
-                    return error_response("Failed to generate connection number")
-
-            toTheNext = request.json.get('toTheNext')
-            if toTheNext:
-                return redirect(url_for('main.joinSupervisor', joinId=joinId+1))
-            else:
-                return error_response("잘못된 요청입니다.", 400)
-
-        else:
-            return jsonify({"message": "Method not allowed."}), 405
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-'''
-@main.route('/welcome/senior/<int:guideId>', methods=['POST, GET']) #아마 프론트에서 자체적으로 처리할 듯.
-def welcomeSenior(guidId):
-    try:
-        pass
-    # 서버 내부 오류 발생 시 500 에러 반환
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@main.route('/welcome/supervisor/<int:guideId>', methods=['POST, GET']) #아마 프론트에서 자체적으로 처리할 듯.
-def welcomeSupervisor(guidId):
-    try:
-        pass
-    # 서버 내부 오류 발생 시 500 에러 반환
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+                    # DB에 생일 정보 저장
+                    result = service.update_senior_birthdate(loginId, year, month, day)
+                    if result == "success":
+                        return jsonify({"message": "Birthday information saved successfully."}), 200
+                    else:
+                        return jsonify({"error": "Failed to save birthday information."}), 500
 
 
-@main.route('/senior/<loginId>', methods=['POST', 'GET']) #ok-ok
-def seniorHome(loginId):
-    try:
-        if request.method == 'GET':
-            try:
-                if (isLoginIdInDB(loginId) == False):
-                    return jsonify({
-                        "error": "" + loginId + "does not exists."
-                    }), 400
-                else:
-                    return jsonify({
-                        "message": "" + loginId + "exists."
-                    }), 200
+                    si = request.json.get('si')
+                    gu = request.json.get('gu')
+                    dong = request.json.get('dong')
 
-            # 서버 내부 오류 발생 시 500 에러 반환
-            except Exception as e:
-                return jsonify({"error": str(e)}), 500
+                    # DB에 거주 정보 저장
+                    result = service.update_senior_address(loginId, si, gu, dong)
+                    if result == "success":
+                        return jsonify({"message": "Residence information saved successfully."}), 200
+                    else:
+                        return jsonify({"error": "Failed to save residence information."}), 500
 
-        elif request.method == 'POST':
-            # 클라이언트로부터 받은 데이터를 처리
-            action = request.json.get('action')
+                
+                    activities = request.json.get('activities', [])  # 사용자가 선택한 활동 리스트
+                    
+                    # 사용자가 버튼에서 선택한 활동들 저장
+                    if activities:
+                        for activity in activities:
+                            if activity not in ['요리', '운동', '바둑', '노래', '춤', '서예', '스마트폰', '식물재배']:
+                                return jsonify({"error": f"Invalid activity: {activity}"}), 400
 
-            if action == 'chat':
-                # '대화하기' 버튼을 누른 경우 /chat 경로로 리다이렉트
-                return redirect(url_for('main.seniorChat', loginId='1'))
-            elif action == 'recommend':
-                # '추천하기' 버튼을 누른 경우 /recommend 경로로 리다이렉트
-                return redirect(url_for('main.seniorRecommend', loginId='1'))
-            else:
-                return jsonify({"error": "Invalid request format"}), 400
-        else:
-            return jsonify({
-                "message": "Method not allowed."
-            }), 405
+                            result = service.save_senior_activity(loginId, activity)
+                            if result != "success":
+                                return jsonify({"error": f"Failed to save activity: {activity}"}), 500
 
-    # 서버 내부 오류 발생 시 500 에러 반환
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
-@main.route('/supervisor/<loginId>', methods=['POST', 'GET']) #ok-ok
-def supervisorHome(loginId):
-    try:
-        if request.method == 'GET':
-            try:
-                if (isLoginIdInDB(loginId) == False):
-                    return jsonify({
-                        "error": "" + loginId + "does not exists."
-                    }), 400
-                else:
-                    return jsonify({
-                        "message": "" + loginId + "exists."
-                    }), 200
+                
+                    connectionNum = request.json.get('connectionNum')
 
-            # 서버 내부 오류 발생 시 500 에러 반환
-            except Exception as e:
-                return jsonify({"error": str(e)}), 500
+                    # 보호자 연결 번호로 DB 내 보호자와 연결
+                    result = service.connect_senior_to_guardian(loginId, connectionNum)
+                    if result == "success":
+                        return redirect(url_for('main.welcome', loginId=loginId))
+                    else:
+                        return jsonify({"error": "Failed to link guardian."}), 500
 
-        if request.method == 'POST':
-            # 클라이언트로부터 받은 데이터를 처리
-            action = request.json.get('action')
+                 elif request.json.get('usertype') == "supervisor":
+                    username = request.json.get('username')
+                    loginId = request.json.get('loginId')
+                    password = request.json.get('password')
+                    phoneNumber = request.json.get('phoneNumber')
 
-            if action == 'notice':
-                # '대화하기' 버튼을 누른 경우 /chat 경로로 리다이렉트
-                return redirect(url_for('main.supervisorNotice', loginId='1'))
-            elif action == 'stats':
-                # '추천하기' 버튼을 누른 경우 /recommend 경로로 리다이렉트
-                return redirect(url_for('main.supervisorStats', loginId='1'))
-            else:
-                return jsonify({"error": "Invalid request format"}), 400
+                    # DB에 supervisor 유저 정보 저장
+                    result = service.register_supervisor_basic_info(username, loginId, password, phoneNumber)
+                    if result == "success":
+                        return jsonify({"message": "User information saved successfully."}), 200
+                    else:
+                        return jsonify({"error": "Failed to save user information."}), 500
 
-    # 서버 내부 오류 발생 시 500 에러 반환
+
+
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
