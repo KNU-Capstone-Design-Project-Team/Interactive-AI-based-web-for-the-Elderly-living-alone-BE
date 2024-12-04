@@ -1,6 +1,7 @@
 #여기에 chatbot, stt, tts 코드가 다 있어서 최종적으로 이 코드만 사용하면 됨.
 import os
-import openai
+#import openai
+from openai import OpenAI
 from dotenv import load_dotenv
 from gtts import gTTS
 import pygame
@@ -9,8 +10,8 @@ import speech_recognition as sr  # For STT
 
 # OpenAI API 키 설정
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
- 
+#openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # 프롬프트 메시지
 content = """독거노인 말동무 역할 사투리·오타 이해,띄어쓰기 없거나 어색해도 의미 파악 후 질문 이거가기 답변은 50자 이내"""
 
@@ -25,10 +26,10 @@ class Chatbot:
         self.context.append({"role": "user", "content": message})
     
     def send_request(self):
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model=self.model, 
             messages=self.context,
-            temperature=0.7,
+            temperature=0.8,
             max_tokens=100,
             frequency_penalty=0.5
         )
@@ -44,37 +45,39 @@ class Chatbot:
         return self.context[-1]['content']
     
     def get_input(self, timeout, prompt):
-        recognizer = sr.Recognizer()
-        attempts = 0  # 입력 시도 횟수
+     recognizer = sr.Recognizer()
+     attempts = 0  # 입력 시도 횟수
 
-        while attempts < 3:
-            with sr.Microphone() as source:
-                # 주변 소음을 1초 동안 분석하여 인식 조정
-                recognizer.adjust_for_ambient_noise(source, duration=1)
-                print(prompt + " (Listening...)")
-                try:
-                    audio = recognizer.listen(source, timeout=timeout)
-                    input_text = recognizer.recognize_google(audio, language="ko-KR")
-                    print("User (voice):", input_text)
-                    return input_text
-                except sr.WaitTimeoutError:
-                    print("시간이 초과되었습니다.")
-                except sr.UnknownValueError:
-                    print("음성을 인식하지 못했습니다. 다시 시도해주세요.")
-                except sr.RequestError:
-                    print("STT 서비스 오류가 발생했습니다.")
+     while attempts < 3:
+         with sr.Microphone() as source:
+            # 주변 소음을 1초 동안 분석하여 인식 조정
+             recognizer.adjust_for_ambient_noise(source, duration=1)
+             print(prompt + " (Listening...)")
+             try:
+                # timeout=timeout 및 phrase_time_limit 추가
+                 audio = recognizer.listen(source, timeout=timeout, phrase_time_limit=5)
+                 input_text = recognizer.recognize_google(audio, language="ko-KR")
+                 print("User (voice):", input_text)
+                 return input_text
+             except sr.WaitTimeoutError:
+                 print("시간이 초과되었습니다.")
+             except sr.UnknownValueError:
+                 print("음성을 인식하지 못했습니다. 다시 시도해주세요.")
+             except sr.RequestError:
+                 print("STT 서비스 오류가 발생했습니다.")
 
-                # 입력 시도 실패 시 시도 횟수 증가
-                attempts += 1
+            # 입력 시도 실패 시 시도 횟수 증가
+             attempts += 1
 
-        # 모든 시도가 실패하면 빈 문자열 반환
-        print("입력을 여러 번 시도했으나 실패했습니다.")
-        return ""
+    # 모든 시도가 실패하면 빈 문자열 반환
+     print("입력을 여러 번 시도했으나 실패했습니다.")
+     return ""
+
 
     def generate_summary(self):
         summary_request = [{"role": "system", "content": "이 대화를 50자 이내로 요약해줘."}]
         summary_request += self.context  # 전체 대화를 요약 요청에 포함
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model=self.model,
             messages=summary_request,
             max_tokens=50
