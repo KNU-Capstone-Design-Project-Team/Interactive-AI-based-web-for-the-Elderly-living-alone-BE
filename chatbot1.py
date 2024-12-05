@@ -164,6 +164,6 @@ class Chatbot1:
 
 '''
 if __name__ == "__main__":
-    chatbot = Chatbot("gpt-4")
+    chatbot = Chatbot1("gpt-4")
     chatbot.chat_loop()
 '''

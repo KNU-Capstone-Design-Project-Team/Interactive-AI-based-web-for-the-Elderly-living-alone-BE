@@ -3,6 +3,7 @@ import datetime
 from bson import ObjectId
 from flask import Flask, request
 from app.models.chatModels import *
+from flask_apscheduler import APScheduler
 from app.scheduler import *
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.base import JobLookupError
@@ -23,6 +24,8 @@ from flask_jwt_extended import JWTManager, create_access_token, create_refresh_t
 def create_app():
 
     app = Flask(__name__)
+    app.config['UPLOAD_FOLDER'] = 'static/audio'
+    app.config['SERVER_NAME'] = 'localhost:5000'
 
     app.logger.debug("Flask app created")
     CORS(app, resources={r"/*": {"origins": "*"}})  # 모든 출처에서의 접근을 허용
@@ -36,7 +39,9 @@ def create_app():
             response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
             return response
 
-    scheduler = BackgroundScheduler(timezone='Asia/Seoul')
+    scheduler = APScheduler()
+    #scheduler = BackgroundScheduler(timezone='Asia/Seoul')
+    scheduler.init_app(app)
 
     '''
     ******* SCHEDULING   methods *******
@@ -53,9 +58,10 @@ def create_app():
             scheduler.add_job(
                 id=f"create first question at {hour}",
                 func=scheduledTask,  # 여기서 ai의 첫 질문을 보내줘야 함.
+                args=[app],
                 trigger="cron",
                 hour=hour,
-                minute=0
+                minute=59
             )
 
     def popMessageQueue():
@@ -116,6 +122,7 @@ def create_app():
     '''
     init
     '''
+
     scheduler.start()
 
     # 환경 변수에 따라 설정 적용

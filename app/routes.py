@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, url_for, redirect
+from flask import Blueprint, request, jsonify, url_for, redirect, current_app
 #import sys
 #print(sys.path)
 from app.models.chatModels import *
@@ -9,7 +9,7 @@ from app.models.loginInfoModels import *
 from app.models.noticeModels import *
 from app.services.chatServices import *
 
-from app.services.loginInfoServices import *
+#from app.services.loginInfoServices import *
 
 """
 from models.chatModels import *
@@ -23,6 +23,7 @@ from services.loginInfoServices import *
 """
 from chatbot import Chatbot
 from chatbot1 import Chatbot1
+from chatbot2 import TTSChatbot2
 from datetime import datetime
 import asyncio
 import signal
@@ -32,7 +33,8 @@ main = Blueprint('main', __name__)
 service = MembershipService()
 
 chatHistory = []
-myChatBot = Chatbot1("gpt-4")
+#myChatBot = Chatbot1("gpt-4")
+myChatBot = TTSChatbot2("gpt-4", current_app)
 # 플래그 변수를 사용하여 이미 응답이 반환되었는지 추적
 response_sent = False
 
@@ -58,19 +60,20 @@ def login():
         if not loginId or not password:
             return jsonify({"error": "loginId and password are required"}), 400
 
-        service = LoginInfoService()
-        response, status_code = service.authenticate_user(loginId, password)
+        #service = LoginInfoService()
+        #response, status_code = service.authenticate_user(loginId, password)
 
-        return jsonify(response), status_code
+        #return jsonify(response), status_code
+        return
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 @main.route('/join', methods=['POST'])
-def joinSenior():
+def join():
     try: 
         if request.method == 'POST':
-                 if request.json.get('usertype') == "senior":
+             if request.json.get('usertype') == "senior":
 
                     username = request.json.get('username')
                     loginId = request.json.get('loginId')
@@ -132,7 +135,7 @@ def joinSenior():
                     else:
                         return jsonify({"error": "Failed to link guardian."}), 500
 
-                 elif request.json.get('usertype') == "supervisor":
+             elif request.json.get('usertype') == "supervisor":
                     username = request.json.get('username')
                     loginId = request.json.get('loginId')
                     password = request.json.get('password')
@@ -145,9 +148,6 @@ def joinSenior():
                     else:
                         return jsonify({"error": "Failed to save user information."}), 500
 
-
-
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -159,12 +159,8 @@ messageQueue = []
 shutdown_flag = False  # 서버 종료 시 비동기 작업 중단을 위한 플래그 변수
 
 # 스케줄링 작업 (특정 시간에 메시지를 전송함)
-def scheduledTask():    #ok
-    # create question
-    today = datetime.now().strftime('%Y%m%d')
-    temp = db.Conversation.find_one({"date": today})
-    createQuestion(temp.get("_id"))
-
+def scheduledTask(app):    #ok
+    ''' # Chatbot1 코드
     # 비동기
     #conv = setAIContent(myChatBot)
     response = myChatBot.send_request()  # AI의 첫 응답
@@ -175,8 +171,19 @@ def scheduledTask():    #ok
     myChatBot.exchange_count += 1  # 대화 횟수를 추적
     myChatBot.ai_count += 1  # ai 대화 횟수 카운트
     messageQueue.append(myChatBot.get_response_content())  # queue에 사용자 입력을 push -> 담아놨다가 시간되면 ...
+    '''
+    with app.app_context():
+        # create question
+        today = datetime.now().strftime('%Y%m%d')
+        temp = db.Conversation.find_one({"date": today})
+        createQuestion(temp.get("_id"))
+    
+        # Chatbot 코드
+        audioUrl, ai = myChatBot.get_response("")
+        messageQueue.append(ai)
+        print("AI: ", myChatBot.get_response_content())
 
-    print(f"create first question at time.")
+        print(f"create first question at time.")
 
 def popAllMessageQueue():
     if messageQueue:
@@ -246,6 +253,75 @@ def seniorChat(loginId):
             gpt와 행복 어르신이 9번 대화하도록 함.
         '''
         try:
+            # Chatbot2 코드 - +)TTS
+            userInput = request.json.get('userInput')
+
+            if myChatBot.exchange_count == 0: # polling으로 들어가야할 ai질문이 들어가지 않았을 경우
+                print(f"First question was not produced.")
+                return jsonify({
+                    "error": "First question was not produced."
+                }), 429
+
+            if myChatBot.exchange_count == 1:
+                if userInput == '\n':
+                    # 대화 종료한 상태(응답안햇다고 저장하기 -> 사실 코드짤필요x 이미 None임.
+                    return jsonify({
+                        "message": "Accept the blank request and end the conversation."
+                    }), 204
+                else:
+                    updateResponseTimeInQuestion(datetime.now())
+
+            if userInput == '\n':
+                # 대화 종료한 상태를 저장하기
+                return jsonify({
+                    "message": "Accept the blank request and end the conversation."
+                }), 204
+
+            # 대화하기
+            message, audioUrl = myChatBot.get_response(userInput)
+
+            if message == None: #대화 횟수를 초과했을 경우
+                print(f"The number of conversations has been exceeded.")
+                return jsonify({
+                    "error": "The number of conversations has been exceeded."
+                }), 429
+
+            # Chatbot 코드
+            '''
+            userInput = request.json.get('userInput')
+
+            if myChatBot.exchange_count == 0: # polling으로 들어가야할 ai질문이 들어가지 않았을 경우
+                print(f"First question was not produced.")
+                return jsonify({
+                    "error": "First question was not produced."
+                }), 429
+
+            if myChatBot.exchange_count == 1:
+                if userInput == '\n':
+                    # 대화 종료한 상태(응답안햇다고 저장하기 -> 사실 코드짤필요x 이미 None임.
+                    return jsonify({
+                        "message": "Accept the blank request and end the conversation."
+                    }), 204
+                else:
+                    updateResponseTimeInQuestion(datetime.now())
+
+            if userInput == '\n':
+                # 대화 종료한 상태를 저장하기
+                return jsonify({
+                    "message": "Accept the blank request and end the conversation."
+                }), 204
+
+            message = myChatBot.get_response(userInput)
+
+            if message == None: #대화 횟수를 초과했을 경우
+                print(f"The number of conversations has been exceeded.")
+                return jsonify({
+                    "error": "The number of conversations has been exceeded."
+                }), 429
+            '''
+
+            # Chatbot1 코드
+            ''' 
             # 혹시 모를 예외처리
             if myChatBot.exchange_count >= 9:  # 9번 대화 교환
                 print(f"The number of conversations has been exceeded.")
@@ -273,9 +349,7 @@ def seniorChat(loginId):
                         updateResponseTimeInQuestion(datetime.now())
 
                 if userInput == '\n':
-                    '''
-                    대화 종료한 상태를 저장하기
-                    '''
+                    # 대화 종료한 상태를 저장하기
                     return jsonify({
                         "message": "Accept the blank request and end the conversation."
                     }), 204
@@ -285,19 +359,18 @@ def seniorChat(loginId):
                 myChatBot.exchange_count += 1
                 print(f"count:")
                 print(myChatBot.exchange_count)
-                print("\n")
 
                 # AI 응답
                 message = setAIContent(myChatBot)
                 print(f"count(ai):")
                 print(myChatBot.exchange_count)
-                print("\n")
                 if (myChatBot.exchange_count == 9):
                     myChatBot.exchange_count = 0  # 대화 횟수를 추적
                     myChatBot.ai_count = 0  # ai 대화 횟수
-
+                '''
             return jsonify({
-                "aiContentSentence": message
+                "aiContentSentence": message,
+                "audioUrl": audioUrl
             }), 200
 
 
