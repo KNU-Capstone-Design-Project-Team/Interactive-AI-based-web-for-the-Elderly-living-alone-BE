@@ -8,10 +8,8 @@ db = client.ElderCareNet
 
 def get30totalPrograms(category):
     programList = []
-    print("4")
     if category == 'total':
         # 전체 30개
-        print("5-2")
         for i in range(0, 30):
             if i == 0:
                 temp = db.ReginalProgram.find_one(sort=[{"date", -1}])
@@ -19,7 +17,6 @@ def get30totalPrograms(category):
                 temp = db.ReginalProgram.find_one(sort=[{"date", -1}], skip=i)
 
             if temp:
-                print("count: %d" %i)
                 programList.append({
                     'postId': temp.get('postId'),
                     'title': temp.get('title'),
@@ -37,7 +34,7 @@ def get30totalPrograms(category):
     if category == 'location':
         # 전체에서 지역을 search해서 가장 최근것들을 30개 받아옴
         # 단 지금은 hardcoding 되어 있으므로 임의의 지역을 search해서 최대 30개를 가져옴
-        print("5-2")
+
         for i in range(0, 30):
             if i == 0:
                 # MatchedLocationProgram
@@ -67,9 +64,9 @@ def get30totalPrograms(category):
         for i in range(0, 30):
             if i == 0:
                 #MatchedPreferenceProgram
-                temp = db.ReginalProgram.find_one(sort=[{"date", -1}])
+                temp = db.MatchPreferenceProgram.find_one(sort=[{"date", -1}])
             else:
-                temp = db.ReginalProgram.find_one(sort=[{"date", -1}], skip=i)
+                temp = db.MatchPreferenceProgram.find_one(sort=[{"date", -1}], skip=i)
 
             if temp:
                 programList.append({

@@ -28,6 +28,10 @@ class Chatbot2:
         self.summary = ""  # 대화 요약을 저장
         self.app = app
 
+    def reset(self):
+        self.exchange_count = 0  # 대화 횟수를 추적
+        self.summary = ""  # 대화 요약을 저장
+
     def add_user_message(self, message):
         self.context.append({"role": "user", "content": message})
 
@@ -120,7 +124,13 @@ class TTSChatbot2(Chatbot2):
         '''
         # TTS 생성 및 파일 저장
         file_name = f"{date.today()}response.mp3"
-        file_path = os.path.join(self.app.config['UPLOAD_FOLDER'], file_name)
+        # file_path = os.path.join(self.app.config['UPLOAD_FOLDER'], file_name)
+        # file_path = os.path.join(self.app.root_path, 'static', 'audio', file_name)
+        file_path = os.path.join(self.app.root_path, self.app.config['UPLOAD_FOLDER'], file_name)
+
+        # 디렉토리가 없으면 생성
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
         tts = gTTS(text=text, lang='ko')
         tts.save(file_path)
 
@@ -147,7 +157,8 @@ class TTSChatbot2(Chatbot2):
             return summary
         else:
             self.add_user_message(user_input)
-        self.exchange_count += 1
+        if (self.exchange_count != 0):
+            self.exchange_count += 1
 
         #ai
         response = self.send_request()

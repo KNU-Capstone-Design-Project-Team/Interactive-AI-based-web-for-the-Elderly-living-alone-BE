@@ -74,6 +74,7 @@ class Chatbot:
      return ""
 
 
+
     def generate_summary(self):
         summary_request = [{"role": "system", "content": "이 대화를 50자 이내로 요약해줘."}]
         summary_request += self.context  # 전체 대화를 요약 요청에 포함

@@ -1,5 +1,3 @@
-import datetime
-
 from bson import ObjectId
 from flask import Flask, request
 from app.models.chatModels import *
@@ -10,9 +8,6 @@ from apscheduler.jobstores.base import JobLookupError
 from app.models.chatModels import *
 from app.routes import scheduledTask, popAllMessageQueue
 from flask_cors import CORS
-from flask_bcrypt import Bcrypt
-from flask_jwt_extended import JWTManager, create_access_token, create_refresh_token, jwt_required, get_jwt_identity
-
 
 '''
 전체적으로 추가 구현해야할 사항:
@@ -26,6 +21,8 @@ def create_app():
     app = Flask(__name__)
     app.config['UPLOAD_FOLDER'] = 'static/audio'
     app.config['SERVER_NAME'] = 'localhost:5000'
+
+    #C:\projects\ElderCareNet\ElderCareNet\static
 
     app.logger.debug("Flask app created")
     CORS(app, resources={r"/*": {"origins": "*"}})  # 모든 출처에서의 접근을 허용
@@ -61,8 +58,18 @@ def create_app():
                 args=[app],
                 trigger="cron",
                 hour=hour,
-                minute=59
+                minute=0
             )
+
+    def test():
+        scheduler.add_job(
+            id=f"create first question at test",
+            func=scheduledTask,  # 여기서 ai의 첫 질문을 보내줘야 함.
+            args=[app],
+            trigger="cron",
+            hour=18,
+            minute=4
+        )
 
     def popMessageQueue():
         hours = [9, 11, 13, 15, 17, 19, 21, 23]
@@ -146,6 +153,7 @@ def create_app():
 
     # Scheduling
     asyncFromFront()
+    test()
     popMessageQueue()
     calculateRatio()
     createsConversation()

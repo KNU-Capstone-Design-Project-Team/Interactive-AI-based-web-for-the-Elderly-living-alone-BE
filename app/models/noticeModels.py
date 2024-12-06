@@ -12,10 +12,14 @@ def recent10DaysNotice(N, loginId):
 
     today = datetime.datetime.now()
     for i in range(N):
-        previousDay = today - datetime.timedelta(days=(i))
+        previousDay = today - datetime.timedelta(days=(i+1))
         previousDay = previousDay.strftime('%Y%m%d')
         temp2 = db.SeniorUser.find_one({"loginId": loginId})
-        temp = db.Conversation.find_one({"SeniorUser_id": temp2.get('_id')}, {"date":previousDay})
+        query = {
+            "SeniorUser_id": temp2.get('_id'),
+            "date": previousDay
+        }
+        temp = db.Conversation.find_one(query)
 
         if temp == None:
             for j in range(i, N): noticeList.append(None)
@@ -23,6 +27,7 @@ def recent10DaysNotice(N, loginId):
         else:
             noticeList.append({"date":previousDay, "responseRate":temp.get('responseRatio')})
 
+    noticeList.reverse()
     return noticeList
 
 def getNameListByLoginId(loginId):
@@ -32,6 +37,7 @@ def getNameListByLoginId(loginId):
 
     for i in seniorList:
         print(i.get('name'))
+        print(i.get('loginId'))
         names.append((i.get('name'), i.get('loginId')))
 
     return names
@@ -42,6 +48,7 @@ def getResponseRatioListByLoginId(nameList):    #(date, responseRatio)
 
     for i in nameList:
         responseTimeList.append(recent10DaysNotice(7, i[1]))
+
 
     return responseTimeList
 

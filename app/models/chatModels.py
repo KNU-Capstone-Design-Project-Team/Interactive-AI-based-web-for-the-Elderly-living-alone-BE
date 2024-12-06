@@ -72,7 +72,7 @@ def updateResponseTimeInQuestion(responseTime):
 
     conv = db.Conversation.find_one({"date": today})
     print(f"conversation find successfully")
-    q = db.Question.find_one({"Conversation_id":(conv.get("_id"))}, {"hour":(now.hour)})
+    q = db.Question.find_one({"Conversation_id":(conv.get("_id")), "hour":(now.hour)})
     print(f"question find successfully")
     db.Question.update_one({"_id": q.get('_id')}, {"$set":{"responseTime": responseTime}})
 

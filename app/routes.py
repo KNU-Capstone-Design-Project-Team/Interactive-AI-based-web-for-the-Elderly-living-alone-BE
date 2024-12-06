@@ -156,6 +156,7 @@ def join():
     ***** CHAT *****
 '''
 messageQueue = []
+mp3Queue = []
 shutdown_flag = False  # 서버 종료 시 비동기 작업 중단을 위한 플래그 변수
 
 # 스케줄링 작업 (특정 시간에 메시지를 전송함)
@@ -179,15 +180,19 @@ def scheduledTask(app):    #ok
         createQuestion(temp.get("_id"))
     
         # Chatbot 코드
-        audioUrl, ai = myChatBot.get_response("")
+        ai, audioUrl = myChatBot.get_response("")
         messageQueue.append(ai)
-        print("AI: ", myChatBot.get_response_content())
-
+        mp3Queue.append(audioUrl)
+        # print("AI: ", myChatBot.get_response_content())
+        # print(audioUrl)
         print(f"create first question at time.")
 
 def popAllMessageQueue():
+    myChatBot.reset()
     if messageQueue:
         messageQueue.clear()
+    if mp3Queue:
+        mp3Queue.clear()
 
 '''
 # Long Polling 엔드포인트
@@ -216,7 +221,11 @@ async def longPoll():
 
         # 새로운 메시지가 있으면 큐에서 제거하여 반환
         message = messageQueue.pop(0)
-        return jsonify({"message": message}), 200
+        mp3 = mp3Queue.pop(0)
+        print(message)
+        print(mp3)
+        return jsonify({"aiContentSentence": message,
+                       "audioUrl": mp3}), 200
     # 서버 내부 오류 발생 시 500 에러 반환
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -262,7 +271,7 @@ def seniorChat(loginId):
                     "error": "First question was not produced."
                 }), 429
 
-            if myChatBot.exchange_count == 1:
+            if (myChatBot.exchange_count <= 3) and (myChatBot.exchange_count >= 1):
                 if userInput == '\n':
                     # 대화 종료한 상태(응답안햇다고 저장하기 -> 사실 코드짤필요x 이미 None임.
                     return jsonify({
@@ -390,8 +399,8 @@ def seniorRecommend(loginId):
             '''
                 #__init__에서 공공데이터를 받아옴 -> PreferredCategory, MatchProgram을 이미 구별해놓은 상태
                 #그래서 전체 : "RegionalProgram"에서 date가 오늘로부터 가장 빠른 것부터 최대 30개를 보내줌.
-                # 위치 : "MatchProgram"에서 date가 오늘로부터 가장 빠른 것부터 최대 30개를 보내줌.
-                # 취향 : "PreferredCategory"에서 date가 오늘로부터 가장 빠른 것부터 최대 30개를 보내줌.
+                # 위치 : "MatchLocationProgram"에서 date가 오늘로부터 가장 빠른 것부터 최대 30개를 보내줌.
+                # 취향 : "MatchPreferredCategory"에서 date가 오늘로부터 가장 빠른 것부터 최대 30개를 보내줌.
             '''
             # loginId가 실제 user인지 확인
             if (isLoginIdInDB(loginId) == False):
@@ -400,9 +409,8 @@ def seniorRecommend(loginId):
                 }), 400
 
             # 전체, 위치, 취향
-            print("0")
             category = request.args.get('category[category]', 'total')
-            print("1")
+
             if category == 'total' or category == 'location' or category == 'preference':
                 print(category)
                 pageList = get30totalPrograms(category)
@@ -497,7 +505,7 @@ def supervisorNotice(loginId):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# 날짜 보내주는 거 추가하기
+# 통계
 @main.route('/supervisor/<loginId>/stats', methods=['GET']) #ok-OK
 def supervisorStats(loginId):
     try:
@@ -508,7 +516,7 @@ def supervisorStats(loginId):
                 for i in nameList:  nameList2.append(i[0])
 
                 responseRatioList = getResponseRatioListByLoginId(nameList)
-                print(responseRatioList)
+
                 return jsonify({
                     "nameList": nameList2,
                     "responseRatioList": responseRatioList,
